@@ -1,0 +1,6 @@
+{
+  "name": "Quiroz Systems",
+  "description": "Plataforma e-learning interactiva para el aprendizaje de programación y tecnologías de software.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

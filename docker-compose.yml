@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PISTON_URL=http://piston_api:2000
+    depends_on:
+      - piston_api
+
+  piston_api:
+    image: ghcr.io/engineer-man/piston:latest
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston_packages:/piston/packages
+    restart: always
+
+volumes:
+  piston_packages:

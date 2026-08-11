@@ -1,0 +1,71 @@
+# Spec-Driven Development — Contrato de Certificados (Fase 1: Zero Trust)
+# Endpoint: POST /api/certificates/issue
+openapi: 3.0.3
+info:
+  title: Quiroz Systems — Certificates API (Emisión)
+  version: "1.0.0"
+  description: >
+    El backend decide si el estudiante es elegible con progreso estrictamente 100%,
+    genera el UUID internamente y persiste el certificado. Nunca se confía en el cliente.
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT_SESSION
+  schemas:
+    IssueRequest:
+      type: object
+      required: [courseId, courseTitle]
+      properties:
+        courseId: { type: string, example: python }
+        courseTitle: { type: string }
+        studyHours: { type: number, default: 45 }
+    Certificate:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: UUID generado por el backend (crypto.randomUUID)
+        studentName: { type: string }
+        courseId: { type: string }
+        courseTitle: { type: string }
+        finalGradePercent: { type: number }
+        studyHours: { type: number }
+        issueDate: { type: string }
+        approvedBy: { type: string }
+paths:
+  /api/certificates/issue:
+    post:
+      summary: Emite un certificado (idempotente) solo con progreso 100%
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IssueRequest" }
+      responses:
+        "200":
+          description: Certificado emitido (o existente) con UUID del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  certificate: { $ref: "#/components/schemas/Certificate" }
+        "401":
+          description: Sesión no autenticada
+        "403":
+          description: Progreso inferior al 100% (o cuenta de otro rol)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+        "400":
+          description: Faltan campos obligatorios (courseId, courseTitle)

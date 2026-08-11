@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --quiroz-blue: #1a73e8;
+  --quiroz-blue-hover: #1557b0;
+}
+
+html, body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Light mode defaults: clean, soft shadow, subtle gray borders */
+body {
+  background-color: #f8f9fa;
+  color: #1f2937;
+}
+
+.dark body,
+body.dark {
+  background-color: #0d0d0d;
+  color: #ededed;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #282828;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+/* Elevation & card shadows: Light mode soft, Dark mode Preloader style with blue glow */
+.gcp-card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+}
+
+.dark .gcp-card-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.7), 0 0 15px -4px rgba(26, 115, 232, 0.15);
+}
+
+.gcp-glow-hover:hover {
+  box-shadow: 0 4px 12px 0 rgba(26, 115, 232, 0.08);
+}
+
+.dark .gcp-glow-hover:hover {
+  box-shadow: 0 0 25px -3px rgba(26, 115, 232, 0.35);
+}
+
+/* Logo 3D Spin / Flip Rotation Animation for 5s Splash Preloader */
+@keyframes logoFlip3D {
+  0% {
+    transform: perspective(600px) rotateY(0deg) scale(1);
+  }
+  50% {
+    transform: perspective(600px) rotateY(180deg) scale(1.08);
+  }
+  100% {
+    transform: perspective(600px) rotateY(360deg) scale(1);
+  }
+}
+
+.animate-logo-flip {
+  animation: logoFlip3D 2.5s ease-in-out infinite;
+}

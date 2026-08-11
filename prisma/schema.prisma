@@ -1,0 +1,116 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Institution {
+  id         String   @id @default(uuid())
+  name       String
+  code       String   @unique
+  adminEmail String
+  status     String   @default("APPROVED") // PENDING | APPROVED | REJECTED
+  createdAt  DateTime @default(now())
+
+  students Student[]
+}
+
+model Student {
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  password       String? // Hash scrypt de la contraseña (null si aún no se ha registrado)
+  role           String   @default("STUDENT") // STUDENT | INSTRUCTOR | SUPER_ADMIN
+  approvalStatus String   @default("APPROVED") // PENDING | APPROVED | REJECTED (for INSTRUCTOR)
+  studentType    String   @default("INDEPENDENT") // INDEPENDENT | INSTITUTIONAL
+  institutionId  String?
+  paidAccess     Boolean  @default(false) // true = pagó licencia completa (acceso a todos los cursos)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  institution      Institution?     @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  certificates     Certificate[]
+  courseProgresses CourseProgress[]
+  sessions         Session[]
+}
+
+// Sesiones de "inicio de sesión": token emitido al validar credenciales (email + contraseña)
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user Student @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Configuración única del método de pago gestionado por el SuperAdmin
+model PaymentConfig {
+  id            String @id @default("default")
+  methodName    String @default("Membresía Quiroz Systems")
+  provider      String @default("Transferencia Bancaria")
+  bankName      String @default("Quiroz Bank")
+  accountNumber String @default("0000-0000-0000-0000")
+  holderName    String @default("Quiroz Systems S.A.")
+  amount        Float  @default(0)
+  currency      String @default("USD")
+  isActive      Boolean @default(true)
+  updatedAt     DateTime @updatedAt
+}
+
+model CourseProgress {
+  id                String          @id @default(uuid())
+  studentId         String
+  courseId          String
+  status            String          @default("IN_PROGRESS") // IN_PROGRESS | PENDING_APPROVAL | APPROVED | CERTIFIED
+  startDate         DateTime        @default(now())
+  completionDate    String?
+  finalGradePercent Float?
+  certificateUuid   String?
+  approvedBy        String?
+  approvalDate      String?
+
+  student  Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attempts LessonAttempt[]
+
+  @@unique([studentId, courseId])
+}
+
+model LessonAttempt {
+  id                 String    @id @default(uuid())
+  courseProgressId   String
+  lessonId           String
+  attemptsCount      Int       @default(1)
+  hintsUnlockedCount Int       @default(0)
+  timeSpentSeconds   Int       @default(0)
+  scoreObtained      Float     @default(0)
+  functionalScore    Float     @default(0)
+  efficiencyScore    Float     @default(0)
+  timeScore          Float     @default(0)
+  passed             Boolean   @default(false)
+  completedAt        DateTime?
+  submittedCode      String
+
+  courseProgress CourseProgress @relation(fields: [courseProgressId], references: [id], onDelete: Cascade)
+
+  @@unique([courseProgressId, lessonId])
+}
+
+model Certificate {
+  uuid              String   @id
+  studentId         String?
+  studentName       String
+  courseId          String
+  courseTitle       String
+  finalGradePercent Float
+  studyHours        Int
+  issueDate         String
+  approvedBy        String?  @default("Quiroz Systems Admin")
+  createdAt         DateTime @default(now())
+
+  student Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,103 @@
+# Spec-Driven Development — Contrato de Evaluación (Fase 1: Zero Trust)
+# Endpoint: POST /api/assessments
+openapi: 3.0.3
+info:
+  title: Quiroz Systems — Assessment API
+  version: "1.0.0"
+  description: >
+    El backend es la única fuente de verdad para la evaluación. El frontend envía la
+    solución y el servidor ejecuta los tests, aplica la rúbrica 70/20/10 y persiste
+    la nota de forma transaccional. El cliente NO calcula puntajes.
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT_SESSION
+  schemas:
+    TestCase:
+      type: object
+      required: [id, output]
+      properties:
+        id: { type: string }
+        input: { type: string, nullable: true }
+        output: { type: string }
+        description: { type: string, nullable: true }
+    TestCaseResult:
+      type: object
+      required: [testCaseId, expectedOutput, actualOutput, passed]
+      properties:
+        testCaseId: { type: string }
+        description: { type: string, nullable: true }
+        input: { type: string, nullable: true }
+        expectedOutput: { type: string }
+        actualOutput: { type: string }
+        passed: { type: boolean }
+        error: { type: string, nullable: true }
+    LessonGrade:
+      type: object
+      description: Nota calculada por el backend (rúbrica 70/20/10)
+      properties:
+        lessonId: { type: string }
+        attemptsCount: { type: number }
+        hintsUnlockedCount: { type: number }
+        timeSpentSeconds: { type: number }
+        scoreObtained: { type: number }
+        functionalScore: { type: number }
+        efficiencyScore: { type: number }
+        timeScore: { type: number }
+        passed: { type: boolean }
+        completedAt: { type: string, nullable: true }
+        submittedCode: { type: string }
+    AssessmentRequest:
+      type: object
+      required: [courseId, lessonId, code, testCases]
+      properties:
+        courseId: { type: string, example: python }
+        lessonId: { type: string, example: py-01 }
+        language: { type: string, example: python }
+        code: { type: string }
+        schemaSql: { type: string, nullable: true, description: Solo lecciones SQL }
+        testCases:
+          type: array
+          items: { $ref: "#/components/schemas/TestCase" }
+        attemptsCount: { type: number, default: 1 }
+        hintsUnlockedCount: { type: number, default: 0 }
+        timeSpentSeconds: { type: number, default: 0 }
+        estimatedMinutes: { type: number, default: 15 }
+        maxScore: { type: number, default: 100 }
+    AssessmentResponse:
+      type: object
+      properties:
+        passed: { type: boolean }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/TestCaseResult" }
+        logs: { type: string }
+        timeMs: { type: number }
+        grade: { $ref: "#/components/schemas/LessonGrade" }
+paths:
+  /api/assessments:
+    post:
+      summary: Evalúa una solución y persiste la nota oficial
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssessmentRequest" }
+      responses:
+        "200":
+          description: Evaluación completada (la nota ya está guardada en SQLite)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssessmentResponse" }
+        "400":
+          description: Faltan campos (courseId, lessonId, code, testCases)
+        "401":
+          description: Sesión no autenticada
+        "500":
+          description: Error interno del servidor

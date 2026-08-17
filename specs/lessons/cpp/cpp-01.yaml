@@ -1,0 +1,24 @@
+id: cpp-01
+title: Primer Programa y Compilación
+level: Básico
+courseId: cpp
+language: C++
+objectives:
+  - Explicar la estructura básica de un archivo fuente en C++.
+  - Compilar y ejecutar un programa utilizando el compilador.
+  - Implementar la salida estándar para imprimir mensajes en consola.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Bienvenido a Quiroz Systems
+        C++ Nivel Cero
+      description: Impresión exacta de dos líneas
+  hints:
+    - Necesitas usar std::cout dos veces o encadenar con <<.
+    - No olvides incluir \n o std::endl para el salto de línea.
+    - Verifica la ortografía exacta requerida en el enunciado.
+approvalCriteria: El código compila sin errores, contiene la función main y pasa
+  el caso de prueba de impresión exacta.
+estimatedMinutes: 45
+maxScore: 100

@@ -1,0 +1,18 @@
+id: rs-08
+title: "Manejo de Errores I: Option y Ausencia de Nulos"
+level: Intermedio
+courseId: rust
+language: Rust
+objectives:
+  - Uso del enum Option<T> con Some y None.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Infinito
+  hints:
+    - Some(dividendo / divisor)
+    - None
+approvalCriteria: Retorno de Option<f64> y desempaquetado con match.
+estimatedMinutes: 60
+maxScore: 100

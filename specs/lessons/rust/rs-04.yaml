@@ -1,0 +1,17 @@
+id: rs-04
+title: "Ownership (Propiedad): El Corazón de Rust"
+level: Intermedio
+courseId: rust
+language: Rust
+objectives:
+  - Reglas de Ownership y clonado explícito con .clone().
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Quiroz Quiroz
+  hints:
+    - let cadena2 = cadena1.clone();
+approvalCriteria: Uso de .clone() para prevenir movimiento de ownership.
+estimatedMinutes: 60
+maxScore: 100

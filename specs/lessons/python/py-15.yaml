@@ -1,0 +1,36 @@
+id: py-15
+title: Proyecto Integrador - Task Manager CLI
+level: Experto
+courseId: python
+language: Python
+objectives:
+  - Construir un sistema de gestión interactivo a prueba de fallos.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        2
+        1
+        Setup
+        2
+        Deploy
+      output: |
+        1 - Setup
+        2 - Deploy
+    - id: tc-2
+      input: |-
+        2
+        a
+        Fallo
+        3
+        Testing
+      output: |
+        3 - Testing
+    - id: tc-3
+      input: "0"
+      output: ""
+  hints:
+    - Usa un try-except ValueError dentro del ciclo.
+approvalCriteria: Aplicación CLI a prueba de fallos de entrada.
+estimatedMinutes: 180
+maxScore: 500

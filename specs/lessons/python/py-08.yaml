@@ -1,0 +1,19 @@
+id: py-08
+title: Manejo de Archivos
+level: Intermedio
+courseId: python
+language: Python
+objectives:
+  - Gestión de archivos con context managers with open.
+exercise:
+  testCases:
+    - id: tc-1
+      input: Prueba 123
+      output: |
+        Prueba 123
+  hints:
+    - Usa with open("log.txt", "w") primero.
+    - Luego with open("log.txt", "r") para leer.
+approvalCriteria: Manejo de contexto con with open.
+estimatedMinutes: 60
+maxScore: 100

@@ -1,0 +1,20 @@
+id: py-01
+title: Primer Programa y Entorno
+level: Básico
+courseId: python
+language: Python
+objectives:
+  - Explicar la naturaleza interpretada de Python.
+  - Ejecutar instrucciones de salida con print().
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Bienvenido a Quiroz Systems
+        Python Nivel Cero
+  hints:
+    - Usa print() dos veces.
+    - Cuida las mayúsculas.
+approvalCriteria: Salida exacta con los saltos de línea requeridos.
+estimatedMinutes: 30
+maxScore: 100

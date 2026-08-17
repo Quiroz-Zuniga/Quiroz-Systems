@@ -1,0 +1,27 @@
+id: cpp-15
+title: Proyecto Integrador - Sistema de Inventario
+level: Experto
+courseId: cpp
+language: C++
+objectives:
+  - Integrar POO, Vectores, Smart Pointers y Menús interactivos.
+exercise:
+  testCases:
+    - id: tc-1
+      input: 3 Lapiz 10 Borrador 5 Regla 15
+      output: |
+        30
+    - id: tc-2
+      input: "0"
+      output: |
+        0
+    - id: tc-3
+      input: 2 Monitor 1500 Teclado 500
+      output: |
+        2000
+  hints:
+    - Inventario encapsula un vector.
+    - Suma los precios de todos los productos.
+approvalCriteria: El proyecto procesa la carga completa encapsulando la lógica en objetos.
+estimatedMinutes: 180
+maxScore: 500

@@ -1,0 +1,18 @@
+id: node-14
+title: Escalabilidad con Módulo Cluster
+level: Experto
+courseId: nodejs
+language: Node.js
+objectives:
+  - Bifurcación multi-core con módulo cluster.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Iniciado Worker
+        Iniciado Worker
+  hints:
+    - if (cluster.isPrimary) { for(let i=0; i<2; i++) cluster.fork(); }
+approvalCriteria: Uso de cluster.isPrimary y cluster.fork().
+estimatedMinutes: 90
+maxScore: 100

@@ -1,0 +1,28 @@
+id: cpp-04
+title: Ciclos y Repetición
+level: Básico
+courseId: cpp
+language: C++
+objectives:
+  - Implementar bucles for para iteraciones conocidas.
+  - Implementar bucles while y do-while.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "5"
+      output: |
+        15
+    - id: tc-2
+      input: "1"
+      output: |
+        1
+    - id: tc-3
+      input: "0"
+      output: |
+        0
+  hints:
+    - Tu bucle for debe iniciar en 1 y terminar cuando i <= n.
+    - Dentro del bucle, usa suma += i;.
+approvalCriteria: Pasar 3/3 casos de prueba calculando la sumatoria correctamente.
+estimatedMinutes: 60
+maxScore: 100

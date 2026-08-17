@@ -1,0 +1,24 @@
+id: sql-11
+title: Subconsultas y Tablas Derivadas
+level: Avanzado
+courseId: sql
+language: SQL
+objectives:
+  - Anidamiento de consultas SELECT en cláusulas WHERE.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Josué|95.0
+        Rubén|90.0
+  hints:
+    - WHERE nota > (SELECT AVG(nota) FROM evaluaciones)
+  schemaSql: |-
+    CREATE TABLE evaluaciones (nombre TEXT, nota REAL);
+    INSERT INTO evaluaciones VALUES ('Carlos', 60);
+    INSERT INTO evaluaciones VALUES ('Josué', 95);
+    INSERT INTO evaluaciones VALUES ('Ana', 70);
+    INSERT INTO evaluaciones VALUES ('Rubén', 90);
+approvalCriteria: Subconsulta escalar anidada en el WHERE.
+estimatedMinutes: 75
+maxScore: 100

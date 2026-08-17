@@ -1,0 +1,28 @@
+id: cpp-06
+title: Arreglos y Cadenas Primitivas
+level: Intermedio
+courseId: cpp
+language: C++
+objectives:
+  - Declarar e inicializar arreglos estáticos.
+  - Iterar sobre arreglos.
+exercise:
+  testCases:
+    - id: tc-1
+      input: 1 5 3 9 2
+      output: |
+        9
+    - id: tc-2
+      input: -1 -5 -2 -9 -3
+      output: |
+        -1
+    - id: tc-3
+      input: 7 7 7 7 7
+      output: |
+        7
+  hints:
+    - Asume que el primer elemento (datos[0]) es el mayor al iniciar.
+    - Itera desde el índice 1 hasta 4.
+approvalCriteria: Encontrar el número mayor incluso con números negativos.
+estimatedMinutes: 75
+maxScore: 100

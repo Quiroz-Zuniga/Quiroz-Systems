@@ -1,0 +1,37 @@
+id: sql-15
+title: "Proyecto Integrador: Plataforma Sentinel"
+level: Experto
+courseId: sql
+language: SQL
+objectives:
+  - Construir un reporte analítico multi-tabla con JOIN, GROUP BY, SUM y ORDER
+    BY.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        ruben_sentinel|6500
+        victor_news|1200
+  hints:
+    - SELECT r.username, SUM(n.visualizaciones) AS total_visualizaciones FROM
+      reporteros r INNER JOIN noticias n ON r.id = n.reportero_id GROUP BY
+      r.username ORDER BY total_visualizaciones DESC;
+  schemaSql: >-
+    CREATE TABLE reporteros (id INTEGER PRIMARY KEY, username TEXT);
+
+    INSERT INTO reporteros VALUES (1, 'ruben_sentinel');
+
+    INSERT INTO reporteros VALUES (2, 'victor_news');
+
+
+    CREATE TABLE noticias (id INTEGER PRIMARY KEY, titulo TEXT, visualizaciones
+    INTEGER, reportero_id INTEGER);
+
+    INSERT INTO noticias VALUES (10, 'Ataque de Phishing', 1500, 1);
+
+    INSERT INTO noticias VALUES (11, 'Nuevo framework JS', 5000, 1);
+
+    INSERT INTO noticias VALUES (12, 'Conferencia Tech', 1200, 2);
+approvalCriteria: Agregación multi-tabla ordenada y agrupada.
+estimatedMinutes: 120
+maxScore: 500

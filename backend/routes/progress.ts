@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { prisma } from '../db';
+import { validateBody, progressSchema } from '../validation';
+import { calculateCourseGrade } from '../domain/rubric';
+import { getCourseMeta } from '../domain/courseRegistry';
 
 export const progressRouter = Router();
 
@@ -54,13 +57,33 @@ progressRouter.get('/progress/:courseId', async (req, res) => {
       }
     });
 
+    // Fase B1 — La nota final del curso se calcula SIEMPRE en el servidor a
+    // partir de los intentos persistidos (rúbrica 70/20/10), nunca se confía
+    // en un valor enviado por el cliente.
+    const totalMaxScore = getCourseMeta(courseId)?.totalMaxScore ?? 0;
+    const finalGradePercent = calculateCourseGrade(
+      progress.attempts.filter((a) => a.passed).map((a) => ({
+        lessonId: a.lessonId,
+        attemptsCount: a.attemptsCount,
+        hintsUnlockedCount: a.hintsUnlockedCount,
+        timeSpentSeconds: a.timeSpentSeconds,
+        scoreObtained: a.scoreObtained,
+        functionalScore: a.functionalScore,
+        efficiencyScore: a.efficiencyScore,
+        timeScore: a.timeScore,
+        passed: a.passed,
+        submittedCode: a.submittedCode,
+      })),
+      totalMaxScore
+    );
+
     return res.json({
       courseId: progress.courseId,
       completedLessonIds,
       attempts: attemptsRecord,
       startDate: progress.startDate.toLocaleDateString('es-ES'),
       completionDate: progress.completionDate || undefined,
-      finalGradePercent: progress.finalGradePercent || undefined,
+      finalGradePercent,
       certificateUuid: progress.certificateUuid || undefined,
     });
   } catch (error: any) {
@@ -69,7 +92,7 @@ progressRouter.get('/progress/:courseId', async (req, res) => {
   }
 });
 
-progressRouter.post('/progress', async (req, res) => {
+progressRouter.post('/progress', validateBody(progressSchema), async (req, res) => {
   try {
     const { courseId, attempts, completionDate, finalGradePercent, certificateUuid } = req.body;
 
@@ -78,66 +101,70 @@ progressRouter.post('/progress', async (req, res) => {
       return res.status(404).json({ error: 'Estudiante no encontrado.' });
     }
 
-    const progress = await prisma.courseProgress.upsert({
-      where: {
-        studentId_courseId: {
+    // Fase C1 — Persistencia atómica: curso + todos los intentos de lección en
+    // una sola transacción. Si falla, no quedan escrituras parciales.
+    await prisma.$transaction(async (tx) => {
+      const progress = await tx.courseProgress.upsert({
+        where: {
+          studentId_courseId: {
+            studentId: student.id,
+            courseId,
+          },
+        },
+        create: {
           studentId: student.id,
           courseId,
+          completionDate: completionDate || null,
+          finalGradePercent: finalGradePercent ? Number(finalGradePercent) : null,
+          certificateUuid: certificateUuid || null,
         },
-      },
-      create: {
-        studentId: student.id,
-        courseId,
-        completionDate: completionDate || null,
-        finalGradePercent: finalGradePercent ? Number(finalGradePercent) : null,
-        certificateUuid: certificateUuid || null,
-      },
-      update: {
-        completionDate: completionDate || undefined,
-        finalGradePercent: finalGradePercent ? Number(finalGradePercent) : undefined,
-        certificateUuid: certificateUuid || undefined,
-      },
-    });
+        update: {
+          completionDate: completionDate || undefined,
+          finalGradePercent: finalGradePercent ? Number(finalGradePercent) : undefined,
+          certificateUuid: certificateUuid || undefined,
+        },
+      });
 
-    if (attempts && typeof attempts === 'object') {
-      for (const lessonId of Object.keys(attempts)) {
-        const att = attempts[lessonId];
-        await prisma.lessonAttempt.upsert({
-          where: {
-            courseProgressId_lessonId: {
-              courseProgressId: progress.id,
-              lessonId,
+      if (attempts && typeof attempts === 'object') {
+        for (const lessonId of Object.keys(attempts)) {
+          const att = attempts[lessonId];
+          await tx.lessonAttempt.upsert({
+            where: {
+              courseProgressId_lessonId: {
+                courseProgressId: progress.id,
+                lessonId,
+              },
             },
-          },
-          create: {
-            courseProgressId: progress.id,
-            lessonId: att.lessonId,
-            attemptsCount: att.attemptsCount || 1,
-            hintsUnlockedCount: att.hintsUnlockedCount || 0,
-            timeSpentSeconds: att.timeSpentSeconds || 0,
-            scoreObtained: Number(att.scoreObtained || 0),
-            functionalScore: Number(att.functionalScore || 0),
-            efficiencyScore: Number(att.efficiencyScore || 0),
-            timeScore: Number(att.timeScore || 0),
-            passed: Boolean(att.passed),
-            submittedCode: att.submittedCode || '',
-            completedAt: att.completedAt ? new Date(att.completedAt) : new Date(),
-          },
-          update: {
-            attemptsCount: att.attemptsCount || 1,
-            hintsUnlockedCount: att.hintsUnlockedCount || 0,
-            timeSpentSeconds: att.timeSpentSeconds || 0,
-            scoreObtained: Number(att.scoreObtained || 0),
-            functionalScore: Number(att.functionalScore || 0),
-            efficiencyScore: Number(att.efficiencyScore || 0),
-            timeScore: Number(att.timeScore || 0),
-            passed: Boolean(att.passed),
-            submittedCode: att.submittedCode || '',
-            completedAt: att.completedAt ? new Date(att.completedAt) : new Date(),
-          },
-        });
+            create: {
+              courseProgressId: progress.id,
+              lessonId: att.lessonId,
+              attemptsCount: att.attemptsCount || 1,
+              hintsUnlockedCount: att.hintsUnlockedCount || 0,
+              timeSpentSeconds: att.timeSpentSeconds || 0,
+              scoreObtained: Number(att.scoreObtained || 0),
+              functionalScore: Number(att.functionalScore || 0),
+              efficiencyScore: Number(att.efficiencyScore || 0),
+              timeScore: Number(att.timeScore || 0),
+              passed: Boolean(att.passed),
+              submittedCode: att.submittedCode || '',
+              completedAt: att.completedAt ? new Date(att.completedAt) : new Date(),
+            },
+            update: {
+              attemptsCount: att.attemptsCount || 1,
+              hintsUnlockedCount: att.hintsUnlockedCount || 0,
+              timeSpentSeconds: att.timeSpentSeconds || 0,
+              scoreObtained: Number(att.scoreObtained || 0),
+              functionalScore: Number(att.functionalScore || 0),
+              efficiencyScore: Number(att.efficiencyScore || 0),
+              timeScore: Number(att.timeScore || 0),
+              passed: Boolean(att.passed),
+              submittedCode: att.submittedCode || '',
+              completedAt: att.completedAt ? new Date(att.completedAt) : new Date(),
+            },
+          });
+        }
       }
-    }
+    });
 
     return res.json({ success: true });
   } catch (error: any) {

@@ -1,0 +1,17 @@
+id: htmlcss-13
+title: Transiciones y Estados (Hover/Focus)
+level: Avanzado
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Propiedad transition y pseudo-clase :hover.
+exercise:
+  testCases:
+    - id: tc-1
+      output: ".tarjeta { transition } | .tarjeta:hover { background-color: darkblue }"
+  hints:
+    - "transition: background-color 0.5s;"
+    - ".tarjeta:hover { background-color: darkblue; }"
+approvalCriteria: Transición en estado de reposo y pseudo-clase :hover.
+estimatedMinutes: 45
+maxScore: 100

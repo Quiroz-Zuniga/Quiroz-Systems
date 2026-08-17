@@ -1,0 +1,26 @@
+id: sql-03
+title: Ordenamiento y Limitación (ORDER BY, LIMIT)
+level: Básico
+courseId: sql
+language: SQL
+objectives:
+  - Ordenar con ORDER BY DESC y restringir con LIMIT.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        2|Lanzamiento de Sentinel|8500
+        4|Desarrollo en Antigravity|4200
+        3|Guía de Debian|2300
+  hints:
+    - ORDER BY visitas DESC LIMIT 3;
+  schemaSql: |-
+    CREATE TABLE articulos (id INTEGER, titulo TEXT, visitas INTEGER);
+    INSERT INTO articulos VALUES (1, 'Bases de IA', 1500);
+    INSERT INTO articulos VALUES (2, 'Lanzamiento de Sentinel', 8500);
+    INSERT INTO articulos VALUES (3, 'Guía de Debian', 2300);
+    INSERT INTO articulos VALUES (4, 'Desarrollo en Antigravity', 4200);
+    INSERT INTO articulos VALUES (5, 'Eventos DevFest', 1100);
+approvalCriteria: Ordenación descendente y recorte a 3 filas.
+estimatedMinutes: 40
+maxScore: 100

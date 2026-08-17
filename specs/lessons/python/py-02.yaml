@@ -1,0 +1,19 @@
+id: py-02
+title: Variables y Tipos de Datos
+level: Básico
+courseId: python
+language: Python
+objectives:
+  - Asignar valores con tipado dinámico.
+  - Utilizar f-strings.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        La edad es: 26
+  hints:
+    - Calcula edad = anio_actual - anio_nacimiento.
+    - 'Usa f"La edad es: {edad}"'
+approvalCriteria: Cálculo dinámico con f-string.
+estimatedMinutes: 45
+maxScore: 100

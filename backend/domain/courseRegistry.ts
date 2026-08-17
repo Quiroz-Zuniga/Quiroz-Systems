@@ -2,7 +2,7 @@
 // Fuente de verdad única: el backend calcula el 100% de un curso a partir de
 // estas lecciones, sin confiar en datos enviados por el cliente (Zero Trust).
 import { allCourses } from '../../src/data/courses';
-import type { Course } from '../../src/types';
+import type { Course } from '../../shared/contracts';
 
 export interface CourseMeta {
   courseId: string;

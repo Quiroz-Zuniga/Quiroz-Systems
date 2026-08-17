@@ -1,0 +1,18 @@
+id: node-01
+title: Introducción al Entorno y el REPL
+level: Básico
+courseId: nodejs
+language: Node.js
+objectives:
+  - Acceder a información del proceso con el objeto global process.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Bienvenido a Quiroz Systems Node.js
+        x64
+  hints:
+    - console.log(process.arch);
+approvalCriteria: Uso del objeto global process.arch.
+estimatedMinutes: 30
+maxScore: 100

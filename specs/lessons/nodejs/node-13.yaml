@@ -1,0 +1,16 @@
+id: node-13
+title: Streams y Buffers para Datos Masivos
+level: Experto
+courseId: nodejs
+language: Node.js
+objectives:
+  - Transmisión por chunks con createReadStream y pipe.
+exercise:
+  testCases:
+    - id: tc-1
+      output: Stream completado
+  hints:
+    - readStream.pipe(writeStream);
+approvalCriteria: Conexión de streams mediante pipe().
+estimatedMinutes: 100
+maxScore: 100

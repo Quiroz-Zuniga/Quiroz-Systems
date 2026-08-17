@@ -1,0 +1,18 @@
+id: htmlcss-02
+title: Enlaces, Rutas e Imágenes
+level: Básico
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Atributos href en <a> y src/alt en <img>.
+exercise:
+  testCases:
+    - id: tc-1
+      output: a[href="https://ejemplo.com"]:Ir al
+        proyecto|img[src="banner.jpg"][alt="Banner principal"]
+  hints:
+    - <a href="https://ejemplo.com">Ir al proyecto</a>
+    - <img src="banner.jpg" alt="Banner principal">
+approvalCriteria: Atributos href, src y alt configurados correctamente.
+estimatedMinutes: 40
+maxScore: 100

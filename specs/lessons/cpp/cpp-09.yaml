@@ -1,0 +1,24 @@
+id: cpp-09
+title: Gestión Dinámica de Memoria
+level: Intermedio
+courseId: cpp
+language: C++
+objectives:
+  - Asignar memoria en el Heap con new.
+  - Liberar memoria con delete.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "5"
+      output: |
+        5
+    - id: tc-2
+      input: "10"
+      output: |
+        10
+  hints:
+    - Declara int* arr = new int[n];
+    - Usa delete[] arr; al final.
+approvalCriteria: El código debe incluir el token delete[].
+estimatedMinutes: 90
+maxScore: 100

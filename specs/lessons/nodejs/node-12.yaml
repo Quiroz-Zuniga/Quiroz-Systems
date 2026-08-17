@@ -1,0 +1,17 @@
+id: node-12
+title: Seguridad Básica y Hashing
+level: Avanzado
+courseId: nodejs
+language: Node.js
+objectives:
+  - Hashing unidireccional con módulo crypto.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        c7d420ecfb0df75a31a5f661005a76985fb0b04ee0c25141bf2bb3d6e52ca31f
+  hints:
+    - crypto.createHash("sha256").update(password).digest("hex")
+approvalCriteria: Hashing unidireccional con módulo crypto.
+estimatedMinutes: 90
+maxScore: 100

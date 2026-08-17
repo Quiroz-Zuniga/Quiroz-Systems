@@ -1,0 +1,17 @@
+id: rs-14
+title: Concurrencia Segura y Threads
+level: Experto
+courseId: rust
+language: Rust
+objectives:
+  - Hilos paralelos con thread::spawn y .join().
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Mensaje de Hilo
+  hints:
+    - hilo.join().unwrap();
+approvalCriteria: Creación y join() de hilos paralelos.
+estimatedMinutes: 100
+maxScore: 100

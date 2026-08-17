@@ -1,0 +1,18 @@
+id: htmlcss-08
+title: Formularios y Controles de Entrada
+level: Intermedio
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Vinculación accesible label for e input id.
+exercise:
+  testCases:
+    - id: tc-1
+      output: label[for="usuario"] | input[id="usuario"][name="username"] |
+        button[type="submit"]
+  hints:
+    - <label for="usuario">Usuario</label>
+    - <input type="text" id="usuario" name="username">
+approvalCriteria: Coincidencia de label for con input id.
+estimatedMinutes: 45
+maxScore: 100

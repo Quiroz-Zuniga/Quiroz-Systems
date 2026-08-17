@@ -1,0 +1,28 @@
+id: sql-10
+title: Consultas Multitabla II (LEFT JOIN)
+level: Avanzado
+courseId: sql
+language: SQL
+objectives:
+  - Asociaciones inclusivas con LEFT JOIN y valores nulos.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Plataforma Sentinel|Víctor López
+        App Guardería|null
+        HTML 30 Day Challenge|Rubén Quiroz
+  hints:
+    - FROM proyectos p LEFT JOIN asignaciones a ON p.id = a.proyecto_id;
+  schemaSql: |-
+    CREATE TABLE proyectos (id INTEGER PRIMARY KEY, nombre_proyecto TEXT);
+    INSERT INTO proyectos VALUES (1, 'Plataforma Sentinel');
+    INSERT INTO proyectos VALUES (2, 'App Guardería');
+    INSERT INTO proyectos VALUES (3, 'HTML 30 Day Challenge');
+
+    CREATE TABLE asignaciones (proyecto_id INTEGER, encargado TEXT);
+    INSERT INTO asignaciones VALUES (1, 'Víctor López');
+    INSERT INTO asignaciones VALUES (3, 'Rubén Quiroz');
+approvalCriteria: Inclusión de registros sin coincidencia produciendo nulos.
+estimatedMinutes: 60
+maxScore: 100

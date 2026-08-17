@@ -1,0 +1,19 @@
+id: rs-01
+title: Primer Programa, Cargo y Macros
+level: Básico
+courseId: rust
+language: Rust
+objectives:
+  - Implementar la macro println! para salida en consola.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Bienvenido a Quiroz Systems
+        Rust Nivel Cero
+  hints:
+    - fn main() { ... }
+    - println!("...");
+approvalCriteria: Macro println! con salida exacta.
+estimatedMinutes: 30
+maxScore: 100

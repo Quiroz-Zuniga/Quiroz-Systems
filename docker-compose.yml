@@ -1,17 +1,27 @@
-version: '3.8'
-
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "80:4000"
     environment:
       - NODE_ENV=production
+      # PUERTO UNIFICADO: Express corre en 4000 (interno); 80 se expone al host.
+      - PORT=4000
+      # Piston corre en la misma red Docker, alcanzable por servicio.
       - PISTON_URL=http://piston_api:2000
+      # Orígenes CORS permitidos (mismo-origin al servir dist/ desde Express).
+      - CORS_ORIGINS=http://localhost,http://localhost:80
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
-      - piston_api
+      piston_api:
+        condition: service_started
 
   piston_api:
     image: ghcr.io/engineer-man/piston:latest

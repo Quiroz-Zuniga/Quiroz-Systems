@@ -1,0 +1,16 @@
+id: node-09
+title: Introducción a Express.js y Enrutamiento
+level: Intermedio
+courseId: nodejs
+language: Node.js
+objectives:
+  - Creación de rutas REST con Express.
+exercise:
+  testCases:
+    - id: tc-1
+      output: '{"status":"ok"}'
+  hints:
+    - 'app.get("/ping", (req, res) => res.json({ status: "ok" }));'
+approvalCriteria: Instanciación de Express y respuesta res.json().
+estimatedMinutes: 60
+maxScore: 100

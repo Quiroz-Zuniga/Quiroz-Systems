@@ -1,0 +1,24 @@
+id: sql-08
+title: Actualización y Borrado Seguro (UPDATE, DELETE)
+level: Intermedio
+courseId: sql
+language: SQL
+objectives:
+  - Mutación de datos con UPDATE y filtro obligatorio WHERE.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        4|Juan|Activo
+        5|Rubén|Finalizado
+        6|María|Activo
+  hints:
+    - UPDATE pasantes SET estado = 'Finalizado' WHERE id = 5;
+  schemaSql: |-
+    CREATE TABLE pasantes (id INTEGER PRIMARY KEY, nombre TEXT, estado TEXT);
+    INSERT INTO pasantes VALUES (4, 'Juan', 'Activo');
+    INSERT INTO pasantes VALUES (5, 'Rubén', 'Activo');
+    INSERT INTO pasantes VALUES (6, 'María', 'Activo');
+approvalCriteria: Modificación aislada del registro objetivo con WHERE.
+estimatedMinutes: 40
+maxScore: 100

@@ -1,0 +1,32 @@
+id: sql-09
+title: Consultas Multitabla I (INNER JOIN)
+level: Avanzado
+courseId: sql
+language: SQL
+objectives:
+  - Cruce de tablas relacionales con INNER JOIN.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        quirozdev|Administrador
+        eny_editor|Editor
+  hints:
+    - INNER JOIN roles r ON u.rol_id = r.id
+  schemaSql: >-
+    CREATE TABLE roles (id INTEGER PRIMARY KEY, nombre_rol TEXT);
+
+    INSERT INTO roles VALUES (1, 'Administrador');
+
+    INSERT INTO roles VALUES (2, 'Editor');
+
+
+    CREATE TABLE usuarios (id INTEGER PRIMARY KEY, username TEXT, rol_id
+    INTEGER);
+
+    INSERT INTO usuarios VALUES (101, 'quirozdev', 1);
+
+    INSERT INTO usuarios VALUES (102, 'eny_editor', 2);
+approvalCriteria: Proyección de datos combinados mediante INNER JOIN.
+estimatedMinutes: 60
+maxScore: 100

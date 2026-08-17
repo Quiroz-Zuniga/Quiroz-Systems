@@ -1,0 +1,18 @@
+id: node-04
+title: Gestión de Paquetes con npm
+level: Básico
+courseId: nodejs
+language: Node.js
+objectives:
+  - Uso de paquetes de terceros de node_modules.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Error Critico
+  hints:
+    - require("colors");
+    - console.log("Error Critico".red);
+approvalCriteria: Uso de librerías de terceros con require.
+estimatedMinutes: 45
+maxScore: 100

@@ -1,0 +1,22 @@
+id: cpp-02
+title: Variables y Tipos de Datos
+level: Básico
+courseId: cpp
+language: C++
+objectives:
+  - Declarar e inicializar variables de diferentes tipos primitivos.
+  - Diferenciar entre tipos enteros, flotantes y booleanos.
+  - Implementar operaciones aritméticas básicas.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        La edad es: 26
+      description: Cálculo dinámico de la edad
+  hints:
+    - Declara las variables con el tipo int.
+    - La fórmula es anio_actual - anio_nacimiento.
+    - Concatena el texto y la variable usando << en std::cout.
+approvalCriteria: Pasar el caso de prueba realizando el cálculo dinámicamente.
+estimatedMinutes: 60
+maxScore: 100

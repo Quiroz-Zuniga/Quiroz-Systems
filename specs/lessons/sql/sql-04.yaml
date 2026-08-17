@@ -1,0 +1,24 @@
+id: sql-04
+title: Funciones de Agregación (COUNT, SUM, AVG)
+level: Básico
+courseId: sql
+language: SQL
+objectives:
+  - Métricas escalares globales y alias con AS.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        240.5|150.5|4
+  hints:
+    - SELECT SUM(monto) AS total_gastado, MAX(monto) AS gasto_maximo, COUNT(id)
+      AS transacciones
+  schemaSql: |-
+    CREATE TABLE gastos_personales (id INTEGER, concepto TEXT, monto REAL);
+    INSERT INTO gastos_personales VALUES (1, 'Supermercado', 150.50);
+    INSERT INTO gastos_personales VALUES (2, 'Internet', 45.00);
+    INSERT INTO gastos_personales VALUES (3, 'Libros', 30.00);
+    INSERT INTO gastos_personales VALUES (4, 'Café', 15.00);
+approvalCriteria: Uso de SUM, MAX, COUNT con alias especificados.
+estimatedMinutes: 45
+maxScore: 100

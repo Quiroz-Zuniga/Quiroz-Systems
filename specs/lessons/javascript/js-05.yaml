@@ -1,0 +1,22 @@
+id: js-05
+title: Funciones Clásicas y Funciones Flecha
+level: Intermedio
+courseId: javascript
+language: JavaScript
+objectives:
+  - Sintaxis de Arrow Functions con retorno implícito.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "20"
+      output: |
+        Permitido
+    - id: tc-2
+      input: "17"
+      output: |
+        Denegado
+  hints:
+    - const esMayorDeEdad = (edad) => edad >= 18;
+approvalCriteria: Función flecha con retorno implícito usando =>.
+estimatedMinutes: 60
+maxScore: 100

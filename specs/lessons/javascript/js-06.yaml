@@ -1,0 +1,34 @@
+id: js-06
+title: Arreglos y Métodos de Mutación
+level: Intermedio
+courseId: javascript
+language: JavaScript
+objectives:
+  - Iteración con for...of y mutación de arreglos.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        5
+        1
+        5
+        3
+        9
+        2
+      output: |
+        9
+    - id: tc-2
+      input: |-
+        5
+        -1
+        -5
+        -2
+        -9
+        -3
+      output: |
+        -1
+  hints:
+    - Recorre con for (const num of datos)
+approvalCriteria: Iteración secuencial sin Math.max().
+estimatedMinutes: 75
+maxScore: 100

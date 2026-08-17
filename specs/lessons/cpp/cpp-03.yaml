@@ -1,0 +1,33 @@
+id: cpp-03
+title: Control de Flujo
+level: Básico
+courseId: cpp
+language: C++
+objectives:
+  - Implementar sentencias condicionales if, else if y else.
+  - Utilizar operadores lógicos y relacionales.
+  - Implementar la estructura switch para opciones múltiples.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "0"
+      output: |
+        Cero
+      description: Número 0
+    - id: tc-2
+      input: "4"
+      output: |
+        Par
+      description: Número par
+    - id: tc-3
+      input: "-3"
+      output: |
+        Impar
+      description: Número impar negativo
+  hints:
+    - Comprueba primero si el número es exactamente igual a 0.
+    - "Para saber si es par, usa el operador módulo % (ej: numero % 2 == 0)."
+    - Todo lo que no sea 0 ni par, cae en el bloque else.
+approvalCriteria: Pasar 3/3 casos de prueba evaluando correctamente 0, pares e impares.
+estimatedMinutes: 60
+maxScore: 100

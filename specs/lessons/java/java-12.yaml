@@ -1,0 +1,26 @@
+id: java-12
+title: Java Collections Framework (List, Map)
+level: Avanzado
+courseId: java
+language: Java
+objectives:
+  - Colecciones dinámicas con List<Integer> y ArrayList.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        5
+        -1 5 -3 9 0
+      output: |
+        5 9 
+    - id: tc-2
+      input: |-
+        3
+        -5 -10 -2
+      output: |+
+        
+  hints:
+    - List<Integer> positivos = new ArrayList<>();
+approvalCriteria: Instanciación y filtrado con ArrayList.
+estimatedMinutes: 90
+maxScore: 100

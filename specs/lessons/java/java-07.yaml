@@ -1,0 +1,26 @@
+id: java-07
+title: Clases, Objetos y Atributos
+level: Intermedio
+courseId: java
+language: Java
+objectives:
+  - Diferenciar Clases de Objetos e instanciar con new.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        5
+        10
+      output: |
+        50
+    - id: tc-2
+      input: |-
+        3
+        3
+      output: |
+        9
+  hints:
+    - Rectangulo rect = new Rectangulo();
+approvalCriteria: Instanciación con new y uso de campos.
+estimatedMinutes: 90
+maxScore: 100

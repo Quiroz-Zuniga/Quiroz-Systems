@@ -1,0 +1,22 @@
+id: cpp-13
+title: Templates genéricos
+level: Experto
+courseId: cpp
+language: C++
+objectives:
+  - Crear funciones genéricas con template.
+exercise:
+  testCases:
+    - id: tc-1
+      input: 5 10 3.1 2.9
+      output: |
+        10 3.1
+    - id: tc-2
+      input: 10 5 2.9 3.1
+      output: |
+        10 3.1
+  hints:
+    - Usa template <typename T> T maximo(T a, T b)
+approvalCriteria: Función genérica utilizable con cualquier tipo comparable.
+estimatedMinutes: 90
+maxScore: 100

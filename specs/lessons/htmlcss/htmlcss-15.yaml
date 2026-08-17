@@ -1,0 +1,19 @@
+id: htmlcss-15
+title: "Proyecto Integrador: Maquetación de Sentinel"
+level: Experto
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Maquetación completa de tarjeta de noticias combinando Flexbox, Custom
+    Properties y semántica.
+exercise:
+  testCases:
+    - id: tc-1
+      output: ".card { display: flex, flex-direction: column, gap: 15px } | .titulo {
+        color: var(--color-primario) }"
+  hints:
+    - "flex-direction: column;"
+    - "color: var(--color-primario);"
+approvalCriteria: Orquestación de Flexbox, Custom Properties y estructura semántica.
+estimatedMinutes: 180
+maxScore: 500

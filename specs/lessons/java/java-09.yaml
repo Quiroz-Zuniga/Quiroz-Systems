@@ -1,0 +1,17 @@
+id: java-09
+title: Herencia y Polimorfismo
+level: Avanzado
+courseId: java
+language: Java
+objectives:
+  - Herencia con extends y anotación @Override.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Trabajo en Codigo
+  hints:
+    - Empleado emp = new Ingeniero();
+approvalCriteria: Instanciación polimórfica y @Override.
+estimatedMinutes: 90
+maxScore: 100

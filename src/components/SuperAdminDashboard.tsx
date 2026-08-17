@@ -28,7 +28,7 @@ interface InstitutionRecord {
   adminEmail: string;
   status: string;
   createdAt: string;
-  students: Array<{ id: string; name: string; email: string; role: string }>;
+  _count: { students: number; instructors: number };
 }
 
 interface StudentPayment {
@@ -98,9 +98,9 @@ export const SuperAdminDashboard: React.FC = () => {
       ]);
       if (resO.ok) setOverview(await resO.json());
       if (resI.ok) setInstructors(await resI.json());
-      if (resS.ok) setInstitutions(await resS.json());
+      if (resS.ok) setInstitutions((await resS.json()).institutions);
       if (resC.ok) setPaymentConfig(await resC.json());
-      if (resSt.ok) setStudents(await resSt.json());
+      if (resSt.ok) setStudents((await resSt.json()).students);
       if (!resO.ok || !resI.ok || !resS.ok || !resC.ok || !resSt.ok) {
         setFetchError('El servidor respondió con error. Verifica que el backend esté en ejecución.');
       }
@@ -117,7 +117,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const fetchPayments = async () => {
     try {
       const res = await fetch('/api/admin/payments', { headers: authHeaders() });
-      if (res.ok) setPayments(await res.json());
+      if (res.ok) setPayments((await res.json()).payments);
     } catch (e) {
       console.error(e);
     }
@@ -415,7 +415,7 @@ export const SuperAdminDashboard: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-[#333333] text-gray-800 dark:text-gray-200">
                 {filteredInstitutions.map((inst) => {
-                  const docentes = inst.students.filter((s) => s.role === 'INSTRUCTOR').length;
+                  const docentes = inst._count.instructors;
                   return (
                     <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-[#262626] transition-colors">
                       <td className="p-3">

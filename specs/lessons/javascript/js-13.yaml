@@ -1,0 +1,26 @@
+id: js-13
+title: Programación Orientada a Objetos
+level: Avanzado
+courseId: javascript
+language: JavaScript
+objectives:
+  - Definición de clases ES6 con constructor.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        5
+        10
+      output: |
+        50
+    - id: tc-2
+      input: |-
+        3
+        3
+      output: |
+        9
+  hints:
+    - class Rectangulo { constructor(ancho, alto) { ... } }
+approvalCriteria: Uso de palabra class e instanciación con new.
+estimatedMinutes: 90
+maxScore: 100

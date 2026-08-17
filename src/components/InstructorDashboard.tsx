@@ -64,7 +64,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
         headers: authHeaders(),
       });
       if (res.ok) {
-        setStudents(await res.json());
+        setStudents((await res.json()).students);
       } else {
         setFetchError(`El servidor respondió con error ${res.status}. Verifica que el backend esté en ejecución.`);
       }

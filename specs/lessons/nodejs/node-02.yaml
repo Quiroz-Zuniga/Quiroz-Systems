@@ -1,0 +1,17 @@
+id: node-02
+title: Objeto Global y Variables de Entorno
+level: Básico
+courseId: nodejs
+language: Node.js
+objectives:
+  - Lectura de variables con process.env.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Servidor escuchando en el puerto 3000
+  hints:
+    - const puerto = process.env.QUIROZ_PORT || 3000;
+approvalCriteria: Lectura de process.env con fallback.
+estimatedMinutes: 45
+maxScore: 100

@@ -1,0 +1,85 @@
+# Spec-Driven Development — Contrato de Ejecución Sandbox (SDD)
+# Endpoint: POST /api/execute
+openapi: 3.0.3
+info:
+  title: Quiroz Systems — Execute API (Sandbox)
+  version: "1.0.0"
+  description: >
+    Ejecuta una solución del estudiante contra un conjunto de test cases de forma
+    aislada (Piston para lenguajes de programación, sql.js para SQL, evaluador
+    HTML/CSS para la lección web) con timeout, cola de concurrencia y rate-limit
+    por usuario. No califica: la calificación vive en /api/assessments.
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT_SESSION
+  schemas:
+    TestCase:
+      type: object
+      required: [id, output]
+      properties:
+        id: { type: string }
+        input: { type: string, nullable: true }
+        output: { type: string }
+        description: { type: string, nullable: true }
+    TestCaseResult:
+      type: object
+      required: [testCaseId, expectedOutput, actualOutput, passed]
+      properties:
+        testCaseId: { type: string }
+        description: { type: string, nullable: true }
+        input: { type: string, nullable: true }
+        expectedOutput: { type: string }
+        actualOutput: { type: string }
+        passed: { type: boolean }
+        error: { type: string, nullable: true }
+    ExecuteRequest:
+      type: object
+      required: [language, code]
+      properties:
+        language:
+          type: string
+          enum: [cpp, python, javascript, java, nodejs, rust, sql, htmlcss]
+        code: { type: string }
+        testCases:
+          type: array
+          items: { $ref: "#/components/schemas/TestCase" }
+          description: Si se omite, se ejecuta un caso por defecto vacío
+    ExecuteResponse:
+      type: object
+      properties:
+        passed: { type: boolean }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/TestCaseResult" }
+        logs: { type: string }
+        timeMs: { type: number }
+paths:
+  /api/execute:
+    post:
+      summary: Ejecuta código en el sandbox aislado (sin calificar)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExecuteRequest" }
+      responses:
+        "200":
+          description: Resultado de la ejecución por test case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecuteResponse" }
+        "400":
+          description: Lenguaje no soportado o body inválido
+        "401":
+          description: Sesión no autenticada
+        "429":
+          description: Límite de ejecuciones por minuto alcanzado o cola llena
+        "503":
+          description: Sandbox (Piston) no disponible
+        "500":
+          description: Error interno del servidor

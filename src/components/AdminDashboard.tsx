@@ -80,7 +80,7 @@ export const AdminDashboard: React.FC = () => {
       }
       if (resStudents.ok) {
         const dataStudents = await resStudents.json();
-        setStudents(dataStudents);
+        setStudents(dataStudents.students);
       }
     } catch (e) {
       console.error('Error fetching admin data:', e);

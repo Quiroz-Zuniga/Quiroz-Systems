@@ -1,0 +1,21 @@
+id: node-15
+title: "Proyecto Integrador: Arquitectura de Microservicio REST"
+level: Experto
+courseId: nodejs
+language: Node.js
+objectives:
+  - Ensamblar API Express con validación de body y middleware JSON.
+exercise:
+  testCases:
+    - id: tc-1
+      input: '{"email":"test@quiroz.com"}'
+      output: '{"error":"Bad Request"}'
+    - id: tc-2
+      input: '{"email":"test@quiroz.com","password":"123"}'
+      output: '{"token":"JWT_SIMULADO"}'
+  hints:
+    - app.use(express.json());
+    - 'res.status(400).json({ error: "Bad Request" });'
+approvalCriteria: Validación de payload con respuestas semánticas en Express.
+estimatedMinutes: 150
+maxScore: 500

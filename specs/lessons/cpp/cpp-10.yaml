@@ -1,0 +1,24 @@
+id: cpp-10
+title: Clases y Objetos
+level: Avanzado
+courseId: cpp
+language: C++
+objectives:
+  - Definir clases con atributos y métodos.
+  - Instanciar objetos con constructores.
+exercise:
+  testCases:
+    - id: tc-1
+      input: 5 10
+      output: |
+        50
+    - id: tc-2
+      input: 3 3
+      output: |
+        9
+  hints:
+    - Usa class Rectangulo { ... };
+    - El método getArea() retorna ancho * alto.
+approvalCriteria: Instanciar el objeto pasando parámetros al constructor.
+estimatedMinutes: 100
+maxScore: 100

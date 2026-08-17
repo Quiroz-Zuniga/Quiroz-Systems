@@ -1,0 +1,19 @@
+id: java-01
+title: Primer Programa y la JVM
+level: Básico
+courseId: java
+language: Java
+objectives:
+  - Estructurar la clase Main y el método public static void main.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Bienvenido a Quiroz Systems
+        Java Nivel Cero
+  hints:
+    - Usa public class Main
+    - Usa System.out.println() dos veces
+approvalCriteria: Clase Main y método principal sintácticamente válidos.
+estimatedMinutes: 45
+maxScore: 100

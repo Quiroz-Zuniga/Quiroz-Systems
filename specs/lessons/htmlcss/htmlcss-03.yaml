@@ -1,0 +1,21 @@
+id: htmlcss-03
+title: Listas y Estructuración de Datos
+level: Básico
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Listas desordenadas <ul> y li.
+exercise:
+  testCases:
+    - id: tc-1
+      output: ul > li:3 (HTML, CSS, JavaScript)
+  hints:
+    - |-
+      <ul>
+        <li>HTML</li>
+        <li>CSS</li>
+        <li>JavaScript</li>
+      </ul>
+approvalCriteria: Anidación estricta de 3 elementos li en ul.
+estimatedMinutes: 30
+maxScore: 100

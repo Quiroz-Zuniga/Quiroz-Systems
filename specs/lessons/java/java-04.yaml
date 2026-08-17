@@ -1,0 +1,26 @@
+id: java-04
+title: Ciclos y Repetición
+level: Básico
+courseId: java
+language: Java
+objectives:
+  - Bucle for para iteración definida.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "5"
+      output: |
+        15
+    - id: tc-2
+      input: "1"
+      output: |
+        1
+    - id: tc-3
+      input: "0"
+      output: |
+        0
+  hints:
+    - for (int i = 1; i <= n; i++) suma += i;
+approvalCriteria: Sumatoria correcta con bucle for.
+estimatedMinutes: 60
+maxScore: 100

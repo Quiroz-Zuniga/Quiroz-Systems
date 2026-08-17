@@ -3,16 +3,21 @@ import { prisma } from '../db';
 import crypto from 'crypto';
 import { hashPassword, verifyPassword } from '../password';
 import { findOrCreateInstitution } from './admin';
-import { getBearerToken, findSessionUser } from '../session';
+import {
+  getSessionToken,
+  findSessionUser,
+  SESSION_TTL_MS,
+  sessionCookieOptions,
+  sessionCookieName,
+} from '../session';
+import { validateBody, registerSchema, loginSchema } from '../validation';
 
 // Acceso: Rutas de autenticación desacopladas (base de datos -> backend -> frontend).
 // - Registro  : POST /api/auth/register  (crea cuenta con contraseña; NO inicia sesión)
 // - Inicio    : POST /api/auth/login     (valida email+contraseña y emite una sesión)
-// - Sesión    : GET  /api/auth/me        (restaura la sesión activa desde el token)
-// - Cierre    : POST /api/auth/logout    (invalida la sesión)
+// - Sesión    : GET  /api/auth/me        (restaura la sesión activa desde el token o la cookie)
+// - Cierre    : POST /api/auth/logout    (invalida la sesión y borra la cookie)
 export const authRouter = Router();
-
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 días
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -32,18 +37,12 @@ function serializeUser(user: any) {
 
 // POST /api/auth/register — Crea la cuenta con contraseña (sin auto-login).
 // Estudiante: queda APROBADO al instante. Docente: queda PENDIENTE de aprobación.
-authRouter.post('/auth/register', async (req: Request, res: Response) => {
+authRouter.post('/auth/register', validateBody(registerSchema), async (req: Request, res: Response) => {
   try {
     const { role, name, email, password, institutionName } = req.body;
 
-    if (!role || !name || !email || !password) {
-      return res.status(400).json({ error: 'Debes completar nombre, correo y contraseña.' });
-    }
     if (role !== 'STUDENT' && role !== 'INSTRUCTOR') {
       return res.status(400).json({ error: 'Este rol no se registra por cuenta propia en la plataforma.' });
-    }
-    if (String(password).length < 6) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
     }
     if (role === 'INSTRUCTOR' && !institutionName) {
       return res.status(400).json({ error: 'Debes indicar tu institución o cátedra.' });
@@ -125,7 +124,7 @@ authRouter.post('/auth/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login — Valida credenciales y emite una sesión (token).
-authRouter.post('/auth/login', async (req: Request, res: Response) => {
+authRouter.post('/auth/login', validateBody(loginSchema), async (req: Request, res: Response) => {
   try {
     const { email, password, role } = req.body;
     if (!email || !password) {
@@ -159,6 +158,10 @@ authRouter.post('/auth/login', async (req: Request, res: Response) => {
       return res.status(403).json({ error: message, approvalStatus: user.approvalStatus });
     }
 
+    // Fase C3 — Rotación de token: cada login invalida todas las sesiones
+    // anteriores del mismo usuario (un solo login activo por cuenta).
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+
     const token = generateToken();
     await prisma.session.create({
       data: {
@@ -168,6 +171,9 @@ authRouter.post('/auth/login', async (req: Request, res: Response) => {
       },
     });
 
+    // Cookie HttpOnly (preferente) + token para clientes que usen Bearer.
+    res.cookie(sessionCookieName(), token, sessionCookieOptions());
+
     return res.json({ token, user: serializeUser(user) });
   } catch (error: any) {
     console.error('Error al iniciar sesión:', error);
@@ -175,14 +181,21 @@ authRouter.post('/auth/login', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/auth/me — Restaura la sesión activa desde el token Bearer.
+// GET /api/auth/me — Restaura la sesión activa desde la cookie HttpOnly o el token Bearer.
 authRouter.get('/auth/me', async (req: Request, res: Response) => {
   try {
-    const token = getBearerToken(req);
+    const token = getSessionToken(req);
     if (!token) return res.status(401).json({ error: 'No hay sesión iniciada.' });
 
     const user = await findSessionUser(token);
     if (!user) return res.status(401).json({ error: 'Sesión expirada o inválida.' });
+
+    // Refrescar TTL (sliding session) en cada consulta válida.
+    await prisma.session.update({
+      where: { token },
+      data: { expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
+    });
+    res.cookie(sessionCookieName(), token, sessionCookieOptions());
 
     return res.json({ user: serializeUser(user) });
   } catch (error: any) {
@@ -191,13 +204,14 @@ authRouter.get('/auth/me', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/logout — Invalida la sesión actual.
+// POST /api/auth/logout — Invalida la sesión actual y borra la cookie.
 authRouter.post('/auth/logout', async (req: Request, res: Response) => {
   try {
-    const token = getBearerToken(req);
+    const token = getSessionToken(req);
     if (token) {
       await prisma.session.deleteMany({ where: { token } });
     }
+    res.clearCookie(sessionCookieName());
     return res.json({ success: true });
   } catch (error: any) {
     console.error('Error al cerrar sesión:', error);

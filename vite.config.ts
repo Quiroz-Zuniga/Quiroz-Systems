@@ -11,6 +11,10 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      outDir: 'dist/public',
+      emptyOutDir: true,
+    },
     server: {
       port: 5173,
       proxy: {

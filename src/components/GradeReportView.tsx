@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Course, CourseProgress, Certificate, StudentProfile, LessonAttempt } from '../types';
-import { calculateCourseGrade } from '../lib/rubric';
 import { downloadCertificatePdf } from '../lib/pdfGenerator';
 import { Award, Download, CheckCircle2, Clock, Zap, Target, ArrowLeft, BarChart3, GitPullRequest } from 'lucide-react';
 
@@ -24,8 +23,32 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
 }) => {
   const attemptsList: LessonAttempt[] = Object.values(progress.attempts || {});
   const completedAttempts: LessonAttempt[] = attemptsList.filter((a) => a.passed);
-  const totalMaxScore = course.lessons.reduce((acc, curr) => acc + curr.maxScore, 0);
-  const finalGradePercent = calculateCourseGrade(completedAttempts, totalMaxScore);
+
+  // B1 — Nota final calculada SIEMPRE por el backend (rúbrica 70/20/10).
+  // El cliente ya no suma puntajes: consulta /api/progress/:courseId que
+  // recalcula la nota a partir de los intentos persistidos en el servidor.
+  const [finalGradePercent, setFinalGradePercent] = useState<number>(
+    typeof progress.finalGradePercent === 'number' ? progress.finalGradePercent : 0
+  );
+
+  useEffect(() => {
+    (async () => {
+      if (!sessionToken || progress.courseId === undefined) return;
+      try {
+        const res = await fetch(`/api/progress/${encodeURIComponent(String(progress.courseId))}`, {
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.finalGradePercent === 'number') {
+            setFinalGradePercent(data.finalGradePercent);
+          }
+        }
+      } catch (e) {
+        console.error('Error al consultar la nota final en el servidor:', e);
+      }
+    })();
+  }, [sessionToken, progress.courseId]);
 
   const totalTimeSeconds = completedAttempts.reduce((acc, curr) => acc + curr.timeSpentSeconds, 0);
 
@@ -60,9 +83,7 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
   if (strengths.length === 0) strengths.push('Perseverancia comprobada para superar todos los test cases.');
   if (improvements.length === 0) improvements.push('Continuar explorando patrones avanzados y arquitectura de producción.');
 
-  const certUuid =
-    progress.certificateUuid ||
-    `${course.id.toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  const certUuid = progress.certificateUuid;
 
   const handleDownloadPdf = async () => {
     try {
@@ -277,7 +298,13 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
               <span>Certificación Oficial Quiroz Systems</span>
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Código UUID asignado: <span className="font-mono text-[#1a73e8] font-bold">{certUuid}</span>
+              {certUuid ? (
+                <>
+                  Código UUID asignado: <span className="font-mono text-[#1a73e8] font-bold">{certUuid}</span>
+                </>
+              ) : (
+                'El código UUID se genera automáticamente al descargar tu certificado.'
+              )}
             </p>
           </div>
 

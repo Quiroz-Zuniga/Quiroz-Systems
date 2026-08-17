@@ -1,0 +1,17 @@
+id: htmlcss-01
+title: Estructura Básica y Etiquetas de Texto
+level: Básico
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Declarar etiquetas h1 y p dentro de body.
+exercise:
+  testCases:
+    - id: tc-1
+      output: h1:Quiroz Systems|p:Iniciando el reto de 30 días de HTML
+  hints:
+    - <h1>Quiroz Systems</h1>
+    - <p>Iniciando el reto de 30 días de HTML</p>
+approvalCriteria: Estructura DOM con h1 y p dentro de body.
+estimatedMinutes: 30
+maxScore: 100

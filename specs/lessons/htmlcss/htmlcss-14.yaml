@@ -1,0 +1,18 @@
+id: htmlcss-14
+title: Variables CSS (Custom Properties)
+level: Experto
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Declaración en :root y lectura con var().
+exercise:
+  testCases:
+    - id: tc-1
+      output: ":root { --color-marca: #3498db } | .encabezado { color:
+        var(--color-marca) }"
+  hints:
+    - ":root { --color-marca: #3498db; }"
+    - "color: var(--color-marca);"
+approvalCriteria: Declaración en :root y llamada con var().
+estimatedMinutes: 45
+maxScore: 100

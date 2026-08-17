@@ -1,0 +1,18 @@
+id: htmlcss-05
+title: Tipografía y Colores
+level: Básico
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Propiedades font-size, color y font-family.
+exercise:
+  testCases:
+    - id: tc-1
+      output: "h1 { font-size: 24px, color: #ff0000, font-family: sans-serif }"
+  hints:
+    - "font-size: 24px;"
+    - "color: #ff0000;"
+    - "font-family: sans-serif;"
+approvalCriteria: Configuración exacta de las 3 propiedades en h1.
+estimatedMinutes: 40
+maxScore: 100

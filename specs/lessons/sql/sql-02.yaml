@@ -1,0 +1,29 @@
+id: sql-02
+title: Filtrado de datos con WHERE
+level: Básico
+courseId: sql
+language: SQL
+objectives:
+  - Restringir filas con WHERE y operadores lógicos.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Rubén|Python
+        Ana|C++
+  hints:
+    - WHERE os = 'Linux' AND edad >= 20;
+  schemaSql: >-
+    CREATE TABLE desarrolladores (id INTEGER, nombre TEXT, lenguaje_principal
+    TEXT, os TEXT, edad INTEGER);
+
+    INSERT INTO desarrolladores VALUES (1, 'Rubén', 'Python', 'Linux', 23);
+
+    INSERT INTO desarrolladores VALUES (2, 'Eny', 'JavaScript', 'Windows', 22);
+
+    INSERT INTO desarrolladores VALUES (3, 'Carlos', 'Java', 'Linux', 19);
+
+    INSERT INTO desarrolladores VALUES (4, 'Ana', 'C++', 'Linux', 25);
+approvalCriteria: Filtrado exacto con operadores relacionales y AND.
+estimatedMinutes: 45
+maxScore: 100

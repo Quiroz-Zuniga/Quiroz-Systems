@@ -1,0 +1,17 @@
+id: sql-14
+title: Restricciones y Claves Foráneas
+level: Experto
+courseId: sql
+language: SQL
+objectives:
+  - Restricción DDL FOREIGN KEY y REFERENCES.
+exercise:
+  testCases:
+    - id: tc-1
+      output: OK
+  hints:
+    - FOREIGN KEY (autor_id) REFERENCES usuarios(id)
+  schemaSql: CREATE TABLE usuarios (id INTEGER PRIMARY KEY);
+approvalCriteria: Declaración DDL de clave foránea válida.
+estimatedMinutes: 60
+maxScore: 100

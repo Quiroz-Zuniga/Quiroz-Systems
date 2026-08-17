@@ -1,0 +1,17 @@
+id: rs-12
+title: "Traits: Definiendo Comportamiento"
+level: Avanzado
+courseId: rust
+language: Rust
+objectives:
+  - Declaración de trait e impl ... for ...
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Guau
+  hints:
+    - impl Hablador for Perro { ... }
+approvalCriteria: Implementación del Trait para el struct.
+estimatedMinutes: 90
+maxScore: 100

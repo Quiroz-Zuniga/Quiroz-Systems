@@ -1,0 +1,23 @@
+id: sql-13
+title: Funciones de Texto y Fechas
+level: Experto
+courseId: sql
+language: SQL
+objectives:
+  - Funciones UPPER, concatenación || y strftime en SQLite.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        DEVFEST TGU (Año: 2025)
+        DEVFEST SPS (Año: 2024)
+  hints:
+    - "UPPER(nombre) || ' (Año: ' || strftime('%Y', fecha_evento) || ')' AS
+      etiqueta"
+  schemaSql: |-
+    CREATE TABLE eventos_dev (nombre TEXT, fecha_evento TEXT);
+    INSERT INTO eventos_dev VALUES ('DevFest TGU', '2025-05-20');
+    INSERT INTO eventos_dev VALUES ('DevFest SPS', '2024-11-23');
+approvalCriteria: Concatenación y extracción de componentes de fecha en SQLite.
+estimatedMinutes: 60
+maxScore: 100

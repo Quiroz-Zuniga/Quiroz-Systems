@@ -1,0 +1,31 @@
+id: js-15
+title: "Proyecto Integrador: Gestor de Tareas Asíncrono"
+level: Experto
+courseId: javascript
+language: JavaScript
+objectives:
+  - Integrar Clases, Async/Await y Arreglos en un Gestor Asíncrono.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        2
+        Deploy
+        Test
+      output: |
+        Tarea: Deploy
+        Tarea: Test
+    - id: tc-2
+      input: |-
+        1
+        Init
+      output: |
+        Tarea: Init
+    - id: tc-3
+      input: "0"
+      output: ""
+  hints:
+    - Usa await app.ejecutarLote(n); dentro de una función async.
+approvalCriteria: Despacho asíncrono y mutación segura de estado en objetos.
+estimatedMinutes: 180
+maxScore: 500

@@ -1,56 +1,30 @@
-import express from 'express';
-import cors from 'cors';
-import { executeRouter } from './routes/execute';
-import { assessmentsRouter } from './routes/assessments';
-import { profileRouter } from './routes/profile';
-import { certificatesRouter } from './routes/certificates';
-import { progressRouter } from './routes/progress';
-import { adminRouter } from './routes/admin';
-import { authRouter } from './routes/auth';
-import { authRequired } from './middleware/auth';
+import { buildApp } from './app';
+import { scheduleSessionCleanup } from './session';
+import * as Sentry from '@sentry/node';
 
-const app = express();
+// Fase C6 — Sentry: se activa solo si SENTRY_DSN está configurado.
+let sentryEnabled = false;
+try {
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'development',
+      tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),
+    });
+    sentryEnabled = true;
+    console.log('[Quiroz Systems Backend API] Sentry habilitado.');
+  }
+} catch (err) {
+  console.warn('[Quiroz Systems Backend API] Sentry no disponible:', err);
+}
+
+const app = buildApp();
 const PORT = process.env.PORT || 4000;
-
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-
-// Fase A1 — Auth MW obligatoria.
-// Protege TODAS las rutas /api/* salvo la lista pública explícita
-// (registro, inicio de sesión y verificación pública de certificados).
-// Cualquier ruta nueva queda protegida por defecto (default-deny).
-const PUBLIC_API_PATHS = [
-  '/auth/register',
-  '/auth/login',
-  '/auth/me',
-  '/auth/logout',
-  '/certificates/verify',
-  '/health',
-];
-
-app.use('/api', (req, res, next) => {
-  const isPublic = PUBLIC_API_PATHS.some(
-    (p) => req.path === p || req.path.startsWith(`${p}/`)
-  );
-  if (isPublic) return next();
-  return authRequired(req, res, next);
-});
-
-// Mount API Routes
-app.use('/api', executeRouter);
-app.use('/api', assessmentsRouter);
-app.use('/api', profileRouter);
-app.use('/api', certificatesRouter);
-app.use('/api', progressRouter);
-app.use('/api', authRouter);
-app.use('/api/admin', adminRouter);
-
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'Quiroz Systems Backend API' });
-});
 
 const server = app.listen(PORT, () => {
   console.log(`[Quiroz Systems Backend API] Servidor Express ejecutándose en http://localhost:${PORT}`);
+  // Fase C3 — Limpieza periódica de sesiones expiradas.
+  scheduleSessionCleanup();
 });
 
 server.on('error', (err: any) => {
@@ -61,4 +35,13 @@ server.on('error', (err: any) => {
     console.error('[Quiroz Systems Backend API] Error al iniciar servidor:', err);
   }
   process.exit(1);
+});
+
+// Fase C6 — Notificar errores no capturados a Sentry (si está configurado).
+if (sentryEnabled) {
+  Sentry.setupExpressErrorHandler(app);
+}
+process.on('unhandledRejection', (reason) => {
+  if (sentryEnabled) Sentry.captureException(reason);
+  console.error('[Quiroz Systems Backend API] Unhandled rejection:', reason);
 });

@@ -1,0 +1,18 @@
+id: node-06
+title: Arquitectura Orientada a Eventos (EventEmitter)
+level: Intermedio
+courseId: nodejs
+language: Node.js
+objectives:
+  - Patrón Observador con EventEmitter.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Alerta: Código 500
+  hints:
+    - sistema.on("fallaCritica", codigo => ...)
+    - sistema.emit("fallaCritica", 500)
+approvalCriteria: Registro y emisión de eventos con EventEmitter.
+estimatedMinutes: 60
+maxScore: 100

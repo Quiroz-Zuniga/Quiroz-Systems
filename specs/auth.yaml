@@ -1,0 +1,140 @@
+# Spec-Driven Development — Contrato de Autenticación (SDD)
+# Endpoints: POST /api/auth/register · POST /api/auth/login ·
+#            GET /api/auth/me · POST /api/auth/logout
+openapi: 3.0.3
+info:
+  title: Quiroz Systems — Auth API
+  version: "1.0.0"
+  description: >
+    Registro e inicio de sesión desacoplados (base de datos -> backend -> frontend).
+    El login emite una sesión y la entrega preferentemente en una cookie HttpOnly
+    `qs_session` (con rotación de token en cada login); el token Bearer se conserva
+    como respaldo retrocompatible. El cierre de sesión invalida el token y borra la
+    cookie. El registro NUNCA inicia sesión.
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT_SESSION
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [STUDENT, INSTRUCTOR, SUPER_ADMIN] }
+        studentType: { type: string, enum: [INDEPENDENT, INSTITUTIONAL] }
+        approvalStatus: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+        institutionName: { type: string, nullable: true }
+    RegisterRequest:
+      type: object
+      required: [role, name, email, password]
+      properties:
+        role: { type: string, enum: [STUDENT, INSTRUCTOR] }
+        name: { type: string, minLength: 2 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        institutionName: { type: string, description: Obligatorio para role=INSTRUCTOR }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        role: { type: string, enum: [STUDENT, INSTRUCTOR], description: Validación cruzada de rol }
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string, description: Respaldo Bearer; la cookie qs_session es la vía preferente }
+        user: { $ref: "#/components/schemas/User" }
+    MeResponse:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+    Unauthorized:
+      type: object
+      properties:
+        error: { type: string }
+        approvalStatus: { type: string, nullable: true }
+paths:
+  /api/auth/register:
+    post:
+      summary: Crea la cuenta con contraseña (sin auto-login)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: Cuenta creada (o reivindicada) correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  user: { $ref: "#/components/schemas/User" }
+        "400":
+          description: Faltan campos o rol no registrable por cuenta propia
+        "409":
+          description: El correo ya tiene cuenta activa o pertenece a otro rol
+        "500":
+          description: Error interno del servidor
+  /api/auth/login:
+    post:
+      summary: Valida credenciales y emite una sesión (cookie HttpOnly + token)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Sesión emitida; además se fija la cookie qs_session
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: Cookie HttpOnly qs_session (sameSite=lax)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "401":
+          description: Credenciales incorrectas
+        "403":
+          description: Docente pendiente o rechazado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Unauthorized" }
+        "500":
+          description: Error interno del servidor
+  /api/auth/me:
+    get:
+      summary: Restaura la sesión activa desde la cookie HttpOnly o el token Bearer
+      responses:
+        "200":
+          description: Sesión válida (sliding TTL de 7 días)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MeResponse" }
+        "401":
+          description: No hay sesión o expiró/rotó
+  /api/auth/logout:
+    post:
+      summary: Invalida la sesión actual y borra la cookie qs_session
+      responses:
+        "200":
+          description: Sesión invalidada (idempotente)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }

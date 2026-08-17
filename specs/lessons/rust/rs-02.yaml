@@ -1,0 +1,18 @@
+id: rs-02
+title: Variables, Mutabilidad y Tipos de Datos
+level: Básico
+courseId: rust
+language: Rust
+objectives:
+  - Declarar variables inmutables por defecto y mutables con mut.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        La edad es: 26
+  hints:
+    - let edad = anio_actual - anio_nacimiento;
+    - 'println!("La edad es: {}", edad);'
+approvalCriteria: Inmutabilidad preservada e interpolación con {}.
+estimatedMinutes: 45
+maxScore: 100

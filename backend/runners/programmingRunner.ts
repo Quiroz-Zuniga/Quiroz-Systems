@@ -1,28 +1,20 @@
-import { exec } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { promisify } from 'util';
+import {
+  runPistonCode,
+  pistonLimiter,
+  UnsupportedLanguageError,
+  PistonUnavailableError,
+  QueueFullError,
+} from '../piston';
+import type { TestCase, TestCaseResult } from '../../shared/contracts';
 
-const execPromise = promisify(exec);
+// TestCase / TestCaseResult provienen del contrato compartido (Fase B3):
+// un único lugar, consumido también por el frontend.
+export type { TestCase, TestCaseResult };
 
-export interface TestCase {
-  id: string;
-  input?: string | null;
-  output: string;
-  description?: string | null;
-}
-
-export interface TestCaseResult {
-  testCaseId: string;
-  description?: string | null;
-  input?: string | null;
-  expectedOutput: string;
-  actualOutput: string;
-  passed: boolean;
-  error?: string;
-}
-
+// Ejecuta los test cases de un lenguaje de programación contra el sandbox aislado
+// (Piston). Los errores de infraestructura (sandbox caído, cola llena, lenguaje no
+// soportado) se propagan para que la ruta responda el status HTTP correcto; solo
+// los errores del código del alumno se convierten en un test case fallido.
 export async function runProgrammingCode(
   language: string,
   code: string,
@@ -34,7 +26,18 @@ export async function runProgrammingCode(
 
   for (const tc of testCases) {
     try {
-      const runRes = await runLocalCode(language, code, tc.input || '');
+      // La concurrencia se limita aquí (aplica a execute y assessments).
+      const runRes = await pistonLimiter.run(() =>
+        runPistonCode({
+          language,
+          code,
+          stdin: tc.input || '',
+          runTimeoutMs: 5000,
+          compileTimeoutMs: 10000,
+          memoryLimitMb: 256,
+        })
+      );
+
       const stdout = runRes.stdout || '';
       const stderr = runRes.stderr || '';
 
@@ -43,7 +46,9 @@ export async function runProgrammingCode(
       const actualTrimmed = stdout.trim();
 
       let passed = false;
-      if (expectedTrimmed === '') {
+      if (runRes.timedOut) {
+        passed = false;
+      } else if (expectedTrimmed === '') {
         passed = runRes.code === 0;
       } else {
         passed = actualTrimmed === expectedTrimmed;
@@ -54,23 +59,37 @@ export async function runProgrammingCode(
         description: tc.description,
         input: tc.input,
         expectedOutput: tc.output,
-        actualOutput: actualOutput || '(Sin salida)',
+        actualOutput: runRes.timedOut
+          ? '(Tiempo límite excedido)'
+          : actualOutput || '(Sin salida)',
         passed,
-        error: stderr ? stderr : undefined,
+        error: stderr
+          ? stderr
+          : runRes.timedOut
+            ? 'Tiempo límite excedido (5s).'
+            : undefined,
       });
 
       if (stderr) {
         globalLogs += `\n[Stderr/Compile]: ${stderr}`;
       }
-    } catch (err: any) {
+    } catch (err) {
+      if (
+        err instanceof QueueFullError ||
+        err instanceof PistonUnavailableError ||
+        err instanceof UnsupportedLanguageError
+      ) {
+        throw err;
+      }
+      const errorMsg = err instanceof Error ? err.message : String(err);
       results.push({
         testCaseId: tc.id,
         description: tc.description,
         input: tc.input,
         expectedOutput: tc.output,
-        actualOutput: `Error de Ejecución: ${err.message}`,
+        actualOutput: `Error de Ejecución: ${errorMsg}`,
         passed: false,
-        error: err.message,
+        error: errorMsg,
       });
     }
   }
@@ -84,72 +103,4 @@ export async function runProgrammingCode(
       (passedAll ? 'Ejecución completada con éxito.' : 'Se encontraron fallos en los casos de prueba.'),
     timeMs: Date.now() - startTime,
   };
-}
-
-// Ejecución local de código en un sandbox temporal (sin dependencia del cliente).
-async function runLocalCode(
-  language: string,
-  code: string,
-  input: string = ''
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quiroz-sandbox-'));
-
-  try {
-    let command = '';
-    let filePath = '';
-
-    if (language === 'python') {
-      filePath = path.join(tmpDir, 'main.py');
-      fs.writeFileSync(filePath, code, 'utf-8');
-      command = `python3 "${filePath}"`;
-    } else if (language === 'javascript' || language === 'nodejs') {
-      filePath = path.join(tmpDir, 'main.js');
-      fs.writeFileSync(filePath, code, 'utf-8');
-      command = `node "${filePath}"`;
-    } else if (language === 'cpp') {
-      filePath = path.join(tmpDir, 'main.cpp');
-      const binPath = path.join(tmpDir, 'main_bin');
-      fs.writeFileSync(filePath, code, 'utf-8');
-      command = `g++ "${filePath}" -o "${binPath}" && "${binPath}"`;
-    } else if (language === 'java') {
-      filePath = path.join(tmpDir, 'Main.java');
-      fs.writeFileSync(filePath, code, 'utf-8');
-      command = `javac "${filePath}" && java -cp "${tmpDir}" Main`;
-    } else if (language === 'rust') {
-      filePath = path.join(tmpDir, 'main.rs');
-      const binPath = path.join(tmpDir, 'main_bin');
-      fs.writeFileSync(filePath, code, 'utf-8');
-      command = `rustc "${filePath}" -o "${binPath}" && "${binPath}"`;
-    } else {
-      throw new Error(`Lenguaje no soportado en sandbox local: ${language}`);
-    }
-
-    return await new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
-      const child = exec(
-        command,
-        {
-          timeout: 5000,
-          maxBuffer: 1024 * 1024 * 5,
-        },
-        (error, stdout, stderr) => {
-          resolve({
-            stdout: stdout ? stdout.toString() : '',
-            stderr: stderr ? stderr.toString() : error ? error.message : '',
-            code: error && error.code !== undefined ? error.code : 0,
-          });
-        }
-      );
-
-      if (input && child.stdin) {
-        child.stdin.write(input);
-        child.stdin.end();
-      }
-    });
-  } finally {
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch (e) {
-      /* ignore cleanup error */
-    }
-  }
 }

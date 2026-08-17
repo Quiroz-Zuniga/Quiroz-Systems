@@ -1,0 +1,17 @@
+id: cpp-14
+title: Smart Pointers y Modern C++
+level: Experto
+courseId: cpp
+language: C++
+objectives:
+  - Usar std::unique_ptr y std::make_unique.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Leyendo
+  hints:
+    - std::unique_ptr<Sensor> sensor = std::make_unique<Sensor>();
+approvalCriteria: Instanciación con puntero inteligente sin new/delete.
+estimatedMinutes: 120
+maxScore: 100

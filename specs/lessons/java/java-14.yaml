@@ -1,0 +1,18 @@
+id: java-14
+title: Concurrencia básica y Threads
+level: Experto
+courseId: java
+language: Java
+objectives:
+  - Hilos paralelos implementando Runnable.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Hilo principal
+        Hilo secundario
+  hints:
+    - Thread hilo = new Thread(new ProcesoFondo()); hilo.start();
+approvalCriteria: Implementar Runnable e invocar .start().
+estimatedMinutes: 100
+maxScore: 100

@@ -1,0 +1,17 @@
+id: rs-10
+title: "Colecciones Comunes: Vectors y Strings"
+level: Avanzado
+courseId: rust
+language: Rust
+objectives:
+  - Uso de la macro vec![] e iteración por referencia.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Encontrado
+  hints:
+    - for num in &numeros { if *num == 20 { ... } }
+approvalCriteria: Iteración prestada por referencia sobre vec![].
+estimatedMinutes: 60
+maxScore: 100

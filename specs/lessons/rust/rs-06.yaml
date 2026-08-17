@@ -1,0 +1,17 @@
+id: rs-06
+title: Structs y Métodos
+level: Intermedio
+courseId: rust
+language: Rust
+objectives:
+  - Structs y bloque impl con receptor &self.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Area: 314
+  hints:
+    - impl Circulo { fn area(&self) -> f64 { 3.14 * self.radio * self.radio } }
+approvalCriteria: Definición de struct e impl con &self.
+estimatedMinutes: 75
+maxScore: 100

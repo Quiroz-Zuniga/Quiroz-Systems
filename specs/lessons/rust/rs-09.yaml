@@ -1,0 +1,18 @@
+id: rs-09
+title: "Manejo de Errores II: Result y el Operador ?"
+level: Avanzado
+courseId: rust
+language: Rust
+objectives:
+  - Errores recuperables con Result<T, E>.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        FallaCritica
+  hints:
+    - Ok(String::from("Hecho"))
+    - Err(String::from("FallaCritica"))
+approvalCriteria: Manejo de Ok y Err con Result.
+estimatedMinutes: 75
+maxScore: 100

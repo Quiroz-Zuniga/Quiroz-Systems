@@ -1,0 +1,16 @@
+id: node-08
+title: Creación de Servidores HTTP Nativos
+level: Intermedio
+courseId: nodejs
+language: Node.js
+objectives:
+  - Servidor HTTP nativo con módulo http.
+exercise:
+  testCases:
+    - id: tc-1
+      output: Test OK
+  hints:
+    - if (req.url === "/test") res.write("Test OK"); res.end();
+approvalCriteria: Enrutamiento manual con http.createServer y res.end().
+estimatedMinutes: 75
+maxScore: 100

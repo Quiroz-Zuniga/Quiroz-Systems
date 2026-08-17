@@ -1,0 +1,19 @@
+id: node-07
+title: El Bucle de Eventos (Event Loop)
+level: Intermedio
+courseId: nodejs
+language: Node.js
+objectives:
+  - Orden de ejecución síncrono vs cola de Timers.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Alfa
+        Gamma
+        Beta
+  hints:
+    - setTimeout con 0ms diferirá "Beta"
+approvalCriteria: Uso de setTimeout para diferir ejecución.
+estimatedMinutes: 45
+maxScore: 100

@@ -97,12 +97,30 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Restaurar sesión activa desde el token guardado (si existe).
+  // Restaurar sesión activa. Fase C3: primero se intenta con la cookie HttpOnly
+    // (credentials incluido automáticamente por ser mismo-origin); si el servidor
+    // no la reconoce, se cae al token Bearer guardado (retrocompatibilidad).
   useEffect(() => {
-    const token = getSessionToken();
-    if (!token) return;
-
     (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          const profile: StudentProfile = { name: data.user.name, email: data.user.email };
+          restoredSessionRef.current = { profile, role: data.user.role };
+          setProfile(profile);
+          setUserRole(data.user.role);
+          setSessionToken(null);
+          return;
+        }
+      } catch (e) {
+        console.error('Error al restaurar sesión por cookie:', e);
+      }
+
+      // Fallback: token Bearer guardado previamente en localStorage.
+      const token = getSessionToken();
+      if (!token) return;
+
       try {
         const res = await fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
@@ -206,13 +224,12 @@ export default function App() {
     saveStudentProfile(userProfile);
     setUserRole(role);
 
-    if (token) {
-      setSessionToken(token);
-      saveSessionToken(token);
-    } else {
-      setSessionToken(null);
-      clearSessionToken();
-    }
+    // Fase C3 — Se prefiere la cookie HttpOnly emitida por el backend sobre el
+    // token en localStorage (menos superficie de ataque XSS). El token en
+    // memoria solo se mantiene como respaldo retrocompatible para peticiones
+    // Bearer; ya no se persiste.
+    setSessionToken(token ?? null);
+    if (!token) clearSessionToken();
 
     restoredSessionRef.current = { profile: userProfile, role };
     setIsLoginModalOpen(false);
@@ -221,7 +238,8 @@ export default function App() {
     if (role === 'STUDENT') {
       // Fetch assigned courses for this student
       try {
-        const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+        const authHeader: Record<string, string> = {};
+        if (token) authHeader.Authorization = `Bearer ${token}`;
         const res = await fetch(`/api/admin/student-assigned-courses?email=${encodeURIComponent(userProfile.email)}`, {
           headers: authHeader,
         });
@@ -243,11 +261,16 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    if (sessionToken) {
-      fetch('/api/auth/logout', {
+    // Fase C3 — Cierra la sesión en el servidor (invalida el token y borra la
+    // cookie HttpOnly) usando credentials para enviar la cookie; Bearer opcional.
+    try {
+      await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${sessionToken}` },
-      }).catch((e) => console.error('Error al cerrar sesión en el servidor:', e));
+        credentials: 'include',
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
+      });
+    } catch (e) {
+      console.error('Error al cerrar sesión en el servidor:', e);
     }
     clearSessionToken();
     setSessionToken(null);

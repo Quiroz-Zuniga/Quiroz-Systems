@@ -1,0 +1,23 @@
+id: py-06
+title: Diccionarios y Sets
+level: Intermedio
+courseId: python
+language: Python
+objectives:
+  - Usar diccionarios clave-valor y conjuntos únicos.
+exercise:
+  testCases:
+    - id: tc-1
+      input: hola
+      output: |
+        {'h': 1, 'o': 1, 'l': 1, 'a': 1}
+    - id: tc-2
+      input: aaabbc
+      output: |
+        {'a': 3, 'b': 2, 'c': 1}
+  hints:
+    - "Recorre cada carácter con for char in texto:"
+    - Suma 1 si existe o inicializa en 1.
+approvalCriteria: Generar el diccionario de frecuencias exacto.
+estimatedMinutes: 75
+maxScore: 100

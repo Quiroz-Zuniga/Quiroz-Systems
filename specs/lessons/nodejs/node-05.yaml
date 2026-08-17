@@ -1,0 +1,17 @@
+id: node-05
+title: Sistema de Archivos (fs) y Path
+level: Intermedio
+courseId: nodejs
+language: Node.js
+objectives:
+  - I/O asíncrono con fs/promises.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        ErrorDeLectura
+  hints:
+    - await fs.readFile("reporte.txt", "utf-8");
+approvalCriteria: Lectura asíncrona con fs/promises y try/catch.
+estimatedMinutes: 60
+maxScore: 100

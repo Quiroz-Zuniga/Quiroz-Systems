@@ -1,0 +1,17 @@
+id: rs-11
+title: Tipos Genéricos (Generics)
+level: Avanzado
+courseId: rust
+language: Rust
+objectives:
+  - Funciones genéricas con <T>.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Rust
+  hints:
+    - "fn devolver_mismo<T>(valor: T) -> T { valor }"
+approvalCriteria: Definición de función genérica con <T>.
+estimatedMinutes: 60
+maxScore: 100

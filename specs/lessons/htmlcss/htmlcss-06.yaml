@@ -1,0 +1,17 @@
+id: htmlcss-06
+title: El Modelo de Caja (Box Model)
+level: Intermedio
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Propiedades width, padding, border y box-sizing.
+exercise:
+  testCases:
+    - id: tc-1
+      output: ".box { width: 200px, padding: 20px, border: 1px solid black,
+        box-sizing: border-box }"
+  hints:
+    - "box-sizing: border-box;"
+approvalCriteria: Modelado volumétrico de caja con border-box.
+estimatedMinutes: 60
+maxScore: 100

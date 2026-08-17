@@ -1,0 +1,16 @@
+id: node-10
+title: Middlewares y Arquitectura de APIs
+level: Avanzado
+courseId: nodejs
+language: Node.js
+objectives:
+  - Middlewares de aplicación y llamada a next().
+exercise:
+  testCases:
+    - id: tc-1
+      output: "2026"
+  hints:
+    - req.timestamp = "2026"; next();
+approvalCriteria: Pipeline de middlewares con invocación a next().
+estimatedMinutes: 75
+maxScore: 100

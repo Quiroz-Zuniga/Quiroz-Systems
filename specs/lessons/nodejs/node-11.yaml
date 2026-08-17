@@ -1,0 +1,16 @@
+id: node-11
+title: Controladores y Simulación de Base de Datos
+level: Avanzado
+courseId: nodejs
+language: Node.js
+objectives:
+  - Controladores asíncronos y req.params.
+exercise:
+  testCases:
+    - id: tc-1
+      output: Perfil 42
+  hints:
+    - const data = await buscarPerfil(req.params.id);
+approvalCriteria: Uso de controladores asíncronos desacoplados.
+estimatedMinutes: 90
+maxScore: 100

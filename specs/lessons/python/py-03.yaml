@@ -1,0 +1,27 @@
+id: py-03
+title: Control de Flujo
+level: Básico
+courseId: python
+language: Python
+objectives:
+  - Controlar flujo con if, elif, else y operadores lógicos.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "0"
+      output: |
+        Cero
+    - id: tc-2
+      input: "4"
+      output: |
+        Par
+    - id: tc-3
+      input: "-3"
+      output: |
+        Impar
+  hints:
+    - "Verifica primero if numero == 0:"
+    - Usa el operador módulo % 2 == 0.
+approvalCriteria: Evaluar 0, par e impar correctamente.
+estimatedMinutes: 60
+maxScore: 100

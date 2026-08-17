@@ -1,8 +1,35 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../db';
 import crypto from 'crypto';
+import { requireRole } from '../middleware/auth';
+import { getPagination } from '../pagination';
+import {
+  validateBody,
+  adminApproveInstructorSchema,
+  adminRegisterInstructorSchema,
+  adminAddStudentSchema,
+  adminCheckStudentTypeSchema,
+  adminApproveCertificateSchema,
+  adminUpdateInstitutionSchema,
+  adminAddInstructorSchema,
+  adminMarkPaidSchema,
+  adminPaymentConfigSchema,
+} from '../validation';
 
 export const adminRouter = Router();
+
+// A5 — El panel de administración exige rol de poder (SUPER_ADMIN/INSTRUCTOR).
+// Ningún estudiante puede auto-atribuirse permisos ni consumir endpoints de
+// administración. `/student-assigned-courses` se exime por ser auto-servicio
+// del propio estudiante (y valida propiedad por separado).
+adminRouter.use((req, res, next) => {
+  if (req.path === '/student-assigned-courses') return next();
+  const role = req.user?.role;
+  if (role !== 'SUPER_ADMIN' && role !== 'INSTRUCTOR') {
+    return res.status(403).json({ error: 'Acceso restringido al panel administrativo.' });
+  }
+  return next();
+});
 
 // Normalize an institution name to a stable key so the same school isn't duplicated
 // with slightly different spellings/capitalization/accents ("Hondura" vs "Honduras" -> "honduras", "politécnica" == "politecnica").
@@ -43,8 +70,8 @@ export async function findOrCreateInstitution(name: string, adminEmail: string, 
   });
 }
 
-// GET /api/admin/overview — Global KPI analytics
-adminRouter.get('/overview', async (_req: Request, res: Response) => {
+// GET /api/admin/overview — Global KPI analytics (solo SuperAdmin)
+adminRouter.get('/overview', requireRole('SUPER_ADMIN'), async (_req: Request, res: Response) => {
   try {
     const totalStudents = await prisma.student.count({ where: { role: 'STUDENT' } });
     const totalInstructors = await prisma.student.count({ where: { role: 'INSTRUCTOR' } });
@@ -74,8 +101,8 @@ adminRouter.get('/overview', async (_req: Request, res: Response) => {
   }
 });
 
-// GET /api/admin/instructors — List all instructors for SuperAdmin approval
-adminRouter.get('/instructors', async (_req: Request, res: Response) => {
+// GET /api/admin/instructors — List instructors for SuperAdmin approval
+adminRouter.get('/instructors', requireRole('SUPER_ADMIN'), async (_req: Request, res: Response) => {
   try {
     const instructors = await prisma.student.findMany({
       where: { role: 'INSTRUCTOR' },
@@ -93,7 +120,7 @@ adminRouter.get('/instructors', async (_req: Request, res: Response) => {
 });
 
 // POST /api/admin/approve-instructor — SuperAdmin approves or rejects instructor/institution
-adminRouter.post('/approve-instructor', async (req: Request, res: Response) => {
+adminRouter.post('/approve-instructor', requireRole('SUPER_ADMIN'), validateBody(adminApproveInstructorSchema), async (req: Request, res: Response) => {
   try {
     const { instructorId, status = 'APPROVED' } = req.body;
     if (!instructorId) return res.status(400).json({ error: 'ID de docente requerido.' });
@@ -123,7 +150,7 @@ adminRouter.post('/approve-instructor', async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/register-instructor — Instructor registers for SuperAdmin approval
-adminRouter.post('/register-instructor', async (req: Request, res: Response) => {
+adminRouter.post('/register-instructor', validateBody(adminRegisterInstructorSchema), async (req: Request, res: Response) => {
   try {
     const { name, email, institutionName } = req.body;
     if (!name || !email || !institutionName) {
@@ -170,46 +197,81 @@ adminRouter.post('/register-instructor', async (req: Request, res: Response) => 
   }
 });
 
-// GET /api/admin/students — List students (filtered by institution if instructorEmail provided)
+// GET /api/admin/students — List students (paginado con proyección).
+// A5: SUPER_ADMIN ve global; INSTRUCTOR SOLO los de su propia institución
+// (resuelta desde la sesión, nunca desde parámetros enviados por el cliente).
+// Fase C2: take/skip desde query (?page&pageSize) y agregados con .aggregate
+// en lugar de reducir en memoria.
 adminRouter.get('/students', async (req: Request, res: Response) => {
   try {
-    const { instructorEmail } = req.query;
-
     let whereClause: any = { role: 'STUDENT' };
 
-    // If request comes from an Instructor, filter ONLY their institution's students!
-    if (instructorEmail && typeof instructorEmail === 'string') {
-      const inst = await prisma.student.findUnique({
-        where: { email: instructorEmail },
+    if (req.user!.role === 'INSTRUCTOR') {
+      const instructor = await prisma.student.findUnique({
+        where: { id: req.user!.id },
         select: { institutionId: true },
       });
-
-      if (inst && inst.institutionId) {
-        whereClause.institutionId = inst.institutionId;
+      if (instructor && instructor.institutionId) {
+        whereClause.institutionId = instructor.institutionId;
+      } else {
+        // Instructor sin institución: no debe ver estudiantes de otros.
+        whereClause.id = '__NONE__';
       }
     }
 
-    const students = await prisma.student.findMany({
-      where: whereClause,
-      include: {
-        institution: true,
+    const { take, skip } = getPagination(req);
+
+    const [students, totalStudents] = await Promise.all([
+      prisma.student.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          studentType: true,
+          createdAt: true,
+          institution: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      prisma.student.count({ where: whereClause }),
+    ]);
+
+    // Agregados por estudiante en SQL (evita cargar todos los progresos).
+    const aggResults = await prisma.student.findMany({
+      where: { id: { in: students.map((s) => s.id) } },
+      select: {
+        id: true,
+        _count: {
+          select: { courseProgresses: true, certificates: true },
+        },
         courseProgresses: {
-          include: {
-            attempts: true,
+          select: {
+            courseId: true,
+            status: true,
+            completionDate: true,
+            finalGradePercent: true,
+            certificateUuid: true,
+            attempts: { select: { passed: true } },
           },
         },
-        certificates: true,
       },
-      orderBy: { createdAt: 'desc' },
     });
+    const aggMap = new Map(aggResults.map((a) => [a.id, a]));
 
     const formatted = students.map((s) => {
-      const totalCoursesStarted = s.courseProgresses.length;
-      const totalCertificates = s.certificates.length;
-      
-      const totalLessonsCompleted = s.courseProgresses.reduce((acc, prog) => {
-        return acc + prog.attempts.filter((a) => a.passed).length;
-      }, 0);
+      const agg = aggMap.get(s.id);
+      const progresses = (agg?.courseProgresses ?? []).map((p) => ({
+        courseId: p.courseId,
+        status: p.status,
+        completionDate: p.completionDate,
+        finalGradePercent: p.finalGradePercent,
+        certificateUuid: p.certificateUuid,
+        passedLessonsCount: p.attempts.filter((a) => a.passed).length,
+      }));
 
       return {
         id: s.id,
@@ -219,21 +281,14 @@ adminRouter.get('/students', async (req: Request, res: Response) => {
         studentType: s.studentType,
         institutionName: s.institution ? s.institution.name : 'Independiente / Autónomo',
         createdAt: s.createdAt,
-        totalCoursesStarted,
-        totalCertificates,
-        totalLessonsCompleted,
-        progresses: s.courseProgresses.map((p) => ({
-          courseId: p.courseId,
-          status: p.status,
-          completionDate: p.completionDate,
-          finalGradePercent: p.finalGradePercent,
-          certificateUuid: p.certificateUuid,
-          passedLessonsCount: p.attempts.filter((a) => a.passed).length,
-        })),
+        totalCoursesStarted: agg?._count.courseProgresses ?? 0,
+        totalCertificates: agg?._count.certificates ?? 0,
+        totalLessonsCompleted: progresses.reduce((acc, p) => acc + p.passedLessonsCount, 0),
+        progresses,
       };
     });
 
-    res.json(formatted);
+    res.json({ students: formatted, total: totalStudents, page: skip / take + 1, pageSize: take });
   } catch (error: any) {
     console.error('Error fetching students:', error);
     res.status(500).json({ error: 'Error al consultar lista de estudiantes.' });
@@ -241,9 +296,11 @@ adminRouter.get('/students', async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/add-student — Add student under Docente / Institución
-adminRouter.post('/add-student', async (req: Request, res: Response) => {
+// A5: si el solicitante es INSTRUCTOR, el alumno se matricula SIEMPRE bajo la
+// institución del docente (resuelta por sesión), sin confiar en el body.
+adminRouter.post('/add-student', validateBody(adminAddStudentSchema), async (req: Request, res: Response) => {
   try {
-    const { name, email, institutionName = 'Instituto Quiroz Systems', courseIds = [], instructorEmail } = req.body;
+    const { name, email, institutionName = 'Instituto Quiroz Systems', courseIds = [] } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ error: 'Nombre y correo electrónico del alumno son obligatorios.' });
@@ -259,11 +316,11 @@ adminRouter.post('/add-student', async (req: Request, res: Response) => {
 
     let inst: any = null;
 
-    // If the request comes from a Docente, enroll the student under THE SAME institution as the docente,
-    // so the student always appears in the docente's list.
-    if (instructorEmail && typeof instructorEmail === 'string') {
+    // Si el solicitante es un Docente, el alumno se matricula bajo LA MISMA
+    // institución del docente (sesión), para que siempre aparezca en su lista.
+    if (req.user!.role === 'INSTRUCTOR') {
       const instructor = await prisma.student.findUnique({
-        where: { email: instructorEmail },
+        where: { id: req.user!.id },
         select: { institutionId: true },
       });
       if (instructor && instructor.institutionId) {
@@ -322,7 +379,7 @@ adminRouter.post('/add-student', async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/check-student-type — Check if email belongs to Institution or Independent
-adminRouter.post('/check-student-type', async (req: Request, res: Response) => {
+adminRouter.post('/check-student-type', validateBody(adminCheckStudentTypeSchema), async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Correo electrónico requerido.' });
@@ -356,7 +413,7 @@ adminRouter.post('/check-student-type', async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/approve-certificate — Approve course progress & issue certificate
-adminRouter.post('/approve-certificate', async (req: Request, res: Response) => {
+adminRouter.post('/approve-certificate', validateBody(adminApproveCertificateSchema), async (req: Request, res: Response) => {
   try {
     const {
       studentId,
@@ -378,11 +435,24 @@ adminRouter.post('/approve-certificate', async (req: Request, res: Response) => 
       student = await prisma.student.findUnique({ where: { id: studentId } });
     }
     if (!student && studentEmail) {
-      student = await prisma.student.upsert({
-        where: { email: studentEmail },
-        update: { name: studentName },
-        create: { name: studentName, email: studentEmail },
+      student = await prisma.student.findUnique({ where: { email: studentEmail } });
+    }
+
+    // A5 — Jerarquía de institución: un Docente SOLO puede certificar a alumnos de
+    // su propia institución, NUNCA ajenos. El SuperAdmin puede certificar a todos.
+    if (!student) {
+      return res.status(404).json({ error: 'Estudiante no encontrado.' });
+    }
+    if (req.user!.role === 'INSTRUCTOR') {
+      const instructor = await prisma.student.findUnique({
+        where: { id: req.user!.id },
+        select: { institutionId: true },
       });
+      if (student.institutionId !== instructor?.institutionId) {
+        return res.status(403).json({
+          error: 'No puedes certificar a estudiantes fuera de tu institución.',
+        });
+      }
     }
 
     const uuid = `${courseId.toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -443,11 +513,17 @@ adminRouter.post('/approve-certificate', async (req: Request, res: Response) => 
 });
 
 // GET /api/admin/student-assigned-courses — Get assigned courseIds for institutional student
+// A5: auto-servicio del estudiante. Un STUDENT SOLO puede consultar SU PROPIO
+// email; SUPER_ADMIN/INSTRUCTOR pueden consultar a cualquier estudiante.
 adminRouter.get('/student-assigned-courses', async (req: Request, res: Response) => {
   try {
     const { email } = req.query;
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ error: 'Email requerido.' });
+    }
+
+    if (req.user!.role === 'STUDENT' && req.user!.email.toLowerCase() !== email.toLowerCase()) {
+      return res.status(403).json({ error: 'No puedes consultar la asignación de otro estudiante.' });
     }
 
     const student = await prisma.student.findUnique({
@@ -481,27 +557,63 @@ adminRouter.get('/student-assigned-courses', async (req: Request, res: Response)
   }
 });
 
-// GET /api/admin/institutions — List all institutions with counts
-adminRouter.get('/institutions', async (_req: Request, res: Response) => {
+// GET /api/admin/institutions — List all institutions with counts (SuperAdmin)
+// Fase C2: paginado con take/skip y conteo de estudiantes con _count (en SQL).
+adminRouter.get('/institutions', requireRole('SUPER_ADMIN'), async (req: Request, res: Response) => {
   try {
-    const institutions = await prisma.institution.findMany({
-      include: {
-        students: {
-          select: { id: true, name: true, email: true, role: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { take, skip } = getPagination(req);
 
-    res.json(institutions);
+    const [institutions, total, instructorCounts] = await Promise.all([
+      prisma.institution.findMany({
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          adminEmail: true,
+          status: true,
+          createdAt: true,
+          _count: { select: { students: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      prisma.institution.count(),
+      prisma.student.groupBy({
+        by: ['institutionId'],
+        where: { role: 'INSTRUCTOR', institutionId: { not: null } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const instructorMap = new Map(
+      instructorCounts
+        .filter((c) => c.institutionId)
+        .map((c) => [c.institutionId, c._count._all])
+    );
+
+    const formatted = institutions.map((inst) => ({
+      id: inst.id,
+      name: inst.name,
+      code: inst.code,
+      adminEmail: inst.adminEmail,
+      status: inst.status,
+      createdAt: inst.createdAt,
+      _count: {
+        students: inst._count.students,
+        instructors: instructorMap.get(inst.id) ?? 0,
+      },
+    }));
+
+    res.json({ institutions: formatted, total, page: skip / take + 1, pageSize: take });
   } catch (error: any) {
     console.error('Error fetching institutions:', error);
     res.status(500).json({ error: 'Error al consultar instituciones.' });
   }
 });
 
-// POST /api/admin/update-institution — Block / authenticate an institution (and its instructors)
-adminRouter.post('/update-institution', async (req: Request, res: Response) => {
+// POST /api/admin/update-institution — Block / authenticate an institution (SuperAdmin)
+adminRouter.post('/update-institution', requireRole('SUPER_ADMIN'), validateBody(adminUpdateInstitutionSchema), async (req: Request, res: Response) => {
   try {
     const { institutionId, status } = req.body;
     if (!institutionId) return res.status(400).json({ error: 'ID de institución requerido.' });
@@ -531,7 +643,7 @@ adminRouter.post('/update-institution', async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/add-instructor — SuperAdmin adds a teacher + institution directly (approved)
-adminRouter.post('/add-instructor', async (req: Request, res: Response) => {
+adminRouter.post('/add-instructor', requireRole('SUPER_ADMIN'), validateBody(adminAddInstructorSchema), async (req: Request, res: Response) => {
   try {
     const { name, email, institutionName } = req.body;
     if (!name || !email || !institutionName) {
@@ -571,34 +683,44 @@ adminRouter.post('/add-instructor', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/admin/payments — List independent students and their premium/paid status
-adminRouter.get('/payments', async (_req: Request, res: Response) => {
+// GET /api/admin/payments — List independent students and their premium/paid status (SuperAdmin)
+// Fase C2: paginado con take/skip y total para el cliente.
+adminRouter.get('/payments', requireRole('SUPER_ADMIN'), async (req: Request, res: Response) => {
   try {
-    const students = await prisma.student.findMany({
-      where: {
-        role: 'STUDENT',
-        // The platform admin account never goes through the payment flow
-        email: { not: 'superadmin@quirozsystems.com' },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        studentType: true,
-        paidAccess: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json(students);
+    const whereClause: any = {
+      role: 'STUDENT',
+      // The platform admin account never goes through the payment flow
+      email: { not: 'superadmin@quirozsystems.com' },
+    };
+    const { take, skip } = getPagination(req);
+
+    const [students, total] = await Promise.all([
+      prisma.student.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          studentType: true,
+          paidAccess: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      prisma.student.count({ where: whereClause }),
+    ]);
+
+    res.json({ payments: students, total, page: skip / take + 1, pageSize: take });
   } catch (error: any) {
     console.error('Error fetching payments:', error);
     res.status(500).json({ error: 'Error al consultar pagos.' });
   }
 });
 
-// POST /api/admin/mark-paid — Set whether a student paid for full access
-adminRouter.post('/mark-paid', async (req: Request, res: Response) => {
+// POST /api/admin/mark-paid — Set whether a student paid for full access (SuperAdmin)
+adminRouter.post('/mark-paid', requireRole('SUPER_ADMIN'), validateBody(adminMarkPaidSchema), async (req: Request, res: Response) => {
   try {
     const { studentId, email, paid } = req.body;
     if (!studentId && !email) return res.status(400).json({ error: 'Estudiante requerido.' });
@@ -615,8 +737,8 @@ adminRouter.post('/mark-paid', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/admin/payment-config — Get the payment method settings
-adminRouter.get('/payment-config', async (_req: Request, res: Response) => {
+// GET /api/admin/payment-config — Get the payment method settings (SuperAdmin)
+adminRouter.get('/payment-config', requireRole('SUPER_ADMIN'), async (_req: Request, res: Response) => {
   try {
     let config = await prisma.paymentConfig.findUnique({ where: { id: 'default' } });
     if (!config) {
@@ -629,8 +751,8 @@ adminRouter.get('/payment-config', async (_req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/payment-config — Update the payment method settings
-adminRouter.post('/payment-config', async (req: Request, res: Response) => {
+// POST /api/admin/payment-config — Update the payment method settings (SuperAdmin)
+adminRouter.post('/payment-config', requireRole('SUPER_ADMIN'), validateBody(adminPaymentConfigSchema), async (req: Request, res: Response) => {
   try {
     const { methodName, provider, bankName, accountNumber, holderName, amount, currency, isActive } = req.body;
     const config = await prisma.paymentConfig.upsert({

@@ -1,0 +1,26 @@
+id: sql-12
+title: Lógica Condicional con CASE WHEN
+level: Avanzado
+courseId: sql
+language: SQL
+objectives:
+  - Bifurcación condicional en proyecciones SELECT.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Licencia Server|1500.0|Gasto Fuerte
+        Dominio web|15.5|Normal
+        Servicio Nube|1200.0|Gasto Fuerte
+        Café|5.0|Normal
+  hints:
+    - CASE WHEN monto > 1000 THEN 'Gasto Fuerte' ELSE 'Normal' END AS alerta
+  schemaSql: |-
+    CREATE TABLE transacciones (concepto TEXT, monto REAL);
+    INSERT INTO transacciones VALUES ('Licencia Server', 1500.00);
+    INSERT INTO transacciones VALUES ('Dominio web', 15.50);
+    INSERT INTO transacciones VALUES ('Servicio Nube', 1200.00);
+    INSERT INTO transacciones VALUES ('Café', 5.00);
+approvalCriteria: Creación de columna derivada mediante CASE WHEN.
+estimatedMinutes: 60
+maxScore: 100

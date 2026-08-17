@@ -212,13 +212,13 @@ export const CourseView: React.FC<CourseViewProps> = ({
     setIsRunning(true);
     setExecutionResult(null);
 
-    const testCases = currentLesson.exercise.testCases;
-
     try {
-      const language = course.type === 'sql' ? 'sql'
-        : course.type === 'htmlcss' ? 'htmlcss'
-        : course.type;
+      const language = course.id === 'sql' ? 'sql'
+        : course.id === 'htmlcss' ? 'htmlcss'
+        : course.id;
 
+      // SDD — El cliente ya NO envía testCases/schemaSql: el backend los carga
+      // desde specs/lessons (fuente de verdad). Solo envía la solución.
       const response = await fetch('/api/assessments', {
         method: 'POST',
         headers: {
@@ -230,8 +230,6 @@ export const CourseView: React.FC<CourseViewProps> = ({
           lessonId: currentLesson.id,
           language,
           code: userCode,
-          schemaSql: currentLesson.exercise.schemaSql,
-          testCases,
           attemptsCount: attemptsCount + 1,
           hintsUnlockedCount,
           timeSpentSeconds: elapsedSeconds,
@@ -253,18 +251,14 @@ export const CourseView: React.FC<CourseViewProps> = ({
         applyServerGrade(execRes.grade);
       }
     } catch (err: any) {
+      // Los test cases ahora provienen de la spec del servidor; el error
+      // frontend se muestra sin conocerlos (result.restulados se usan si vienen).
       setExecutionResult({
         passed: false,
-        results: testCases.map((tc) => ({
-          testCaseId: tc.id,
-          expectedOutput: tc.output,
-          actualOutput: 'Error de ejecución: ' + err.message,
-          passed: false,
-          error: err.message,
-        })),
+        results: [],
         logs: 'Error de servidor: ' + err.message,
         timeMs: 0,
-      });
+      } as any);
     } finally {
       setIsRunning(false);
     }

@@ -1,0 +1,28 @@
+id: cpp-05
+title: Funciones y Alcance
+level: Intermedio
+courseId: cpp
+language: C++
+objectives:
+  - Declarar, definir e invocar funciones.
+  - Retornar valores desde una función.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "20"
+      output: |
+        Acceso Permitido
+    - id: tc-2
+      input: "17"
+      output: |
+        Acceso Denegado
+    - id: tc-3
+      input: "18"
+      output: |
+        Acceso Permitido
+  hints:
+    - La firma de tu función debe ser bool esMayorDeEdad(int edad).
+    - Puedes usar directamente return edad >= 18;.
+approvalCriteria: La función externa debe existir y ser llamada correctamente en el main.
+estimatedMinutes: 90
+maxScore: 100

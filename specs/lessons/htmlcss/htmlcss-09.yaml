@@ -1,0 +1,16 @@
+id: htmlcss-09
+title: HTML5 Semántico
+level: Intermedio
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Reemplazar div genéricos con <header>, <nav>, <main>.
+exercise:
+  testCases:
+    - id: tc-1
+      output: "header > h1 | nav > a | main > p (divs: 0)"
+  hints:
+    - Reemplaza los divs por <header>, <nav> y <main>
+approvalCriteria: Estructura semántica sin uso de divs genéricos.
+estimatedMinutes: 30
+maxScore: 100

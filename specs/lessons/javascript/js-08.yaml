@@ -1,0 +1,22 @@
+id: js-08
+title: "Iteración Funcional: map, filter y reduce"
+level: Intermedio
+courseId: javascript
+language: JavaScript
+objectives:
+  - Filtrado declarativo e inmutable con .filter().
+exercise:
+  testCases:
+    - id: tc-1
+      input: "10"
+      output: |
+        1 3 5 7 9
+    - id: tc-2
+      input: "5"
+      output: |
+        1 3 5
+  hints:
+    - const impares = datos.filter(num => num % 2 !== 0);
+approvalCriteria: Uso explícito de .filter().
+estimatedMinutes: 90
+maxScore: 100

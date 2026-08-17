@@ -1,0 +1,18 @@
+id: js-01
+title: Primer Programa y Consola
+level: Básico
+courseId: javascript
+language: JavaScript
+objectives:
+  - Utilizar console.log para depurar e imprimir mensajes.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Bienvenido a Quiroz Systems
+        JS Nivel Cero
+  hints:
+    - Usa console.log() dos veces.
+approvalCriteria: Salida exacta sin excepciones de sintaxis.
+estimatedMinutes: 30
+maxScore: 100

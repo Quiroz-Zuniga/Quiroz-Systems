@@ -1,0 +1,19 @@
+id: py-13
+title: Decoradores
+level: Experto
+courseId: python
+language: Python
+objectives:
+  - Creación y uso de decoradores con @.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        <html>
+        Hola
+        </html>
+  hints:
+    - Usa @etiqueta_html antes de la función contenido.
+approvalCriteria: Uso correcto del operador @ y wrapper.
+estimatedMinutes: 100
+maxScore: 100

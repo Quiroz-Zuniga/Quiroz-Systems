@@ -1,0 +1,20 @@
+id: java-13
+title: Expresiones Lambda y API Streams
+level: Experto
+courseId: java
+language: Java
+objectives:
+  - Pipeline declarativo con stream().filter().map().forEach().
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        2
+        6
+        10
+  hints:
+    - filter(n -> n % 2 != 0)
+    - map(n -> n * 2)
+approvalCriteria: Encadenamiento de funciones en API Streams.
+estimatedMinutes: 90
+maxScore: 100

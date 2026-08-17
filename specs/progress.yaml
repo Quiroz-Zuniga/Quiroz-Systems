@@ -1,0 +1,128 @@
+# Spec-Driven Development — Contrato de Progreso (SDD)
+# Endpoints: GET /api/progress/:courseId · POST /api/progress
+openapi: 3.0.3
+info:
+  title: Quiroz Systems — Progress API
+  version: "1.0.0"
+  description: >
+    Persistencia y lectura del progreso por curso del estudiante autenticado.
+    La escritura es transaccional (curso + intentos sin estados parciales). La
+    nota final del curso se recalcula SIEMPRE en el servidor con la rúbrica, nunca
+    se confía en el finalGradePercent enviado por el cliente (Zero Trust).
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT_SESSION
+  schemas:
+    AttemptPayload:
+      type: object
+      properties:
+        lessonId: { type: string }
+        attemptsCount: { type: number, default: 1 }
+        hintsUnlockedCount: { type: number, default: 0 }
+        timeSpentSeconds: { type: number, default: 0 }
+        scoreObtained: { type: number, default: 0 }
+        functionalScore: { type: number, default: 0 }
+        efficiencyScore: { type: number, default: 0 }
+        timeScore: { type: number, default: 0 }
+        passed: { type: boolean, default: false }
+        submittedCode: { type: string, default: "" }
+        completedAt: { type: string, nullable: true }
+    AttemptRecord:
+      type: object
+      properties:
+        lessonId: { type: string }
+        attemptsCount: { type: number }
+        hintsUnlockedCount: { type: number }
+        timeSpentSeconds: { type: number }
+        scoreObtained: { type: number }
+        functionalScore: { type: number }
+        efficiencyScore: { type: number }
+        timeScore: { type: number }
+        passed: { type: boolean }
+        submittedCode: { type: string }
+        completedAt: { type: string, nullable: true }
+    SaveProgressRequest:
+      type: object
+      required: [courseId]
+      properties:
+        courseId: { type: string, example: python }
+        attempts:
+          type: object
+          description: Mapa lessonId -> intento
+          additionalProperties:
+            $ref: "#/components/schemas/AttemptPayload"
+        completionDate:
+          type: string
+          nullable: true
+          description: No es fuente de verdad; el backend recalcula la nota.
+        finalGradePercent:
+          type: number
+          nullable: true
+          description: Se ignora como fuente de verdad (recalculado en servidor).
+        certificateUuid:
+          type: string
+          nullable: true
+    ProgressResponse:
+      type: object
+      properties:
+        courseId: { type: string }
+        completedLessonIds:
+          type: array
+          items: { type: string }
+        attempts:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AttemptRecord"
+        startDate: { type: string }
+        completionDate: { type: string, nullable: true }
+        finalGradePercent: { type: number, description: Calculado en el servidor con la rúbrica 70/20/10 }
+        certificateUuid: { type: string, nullable: true }
+paths:
+  /api/progress/{courseId}:
+    get:
+      summary: Lectura del progreso del estudiante autenticado en un curso
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Progreso del curso (vacío si aún no existe)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProgressResponse" }
+        "401":
+          description: Sesión no autenticada
+        "404":
+          description: Estudiante no encontrado
+  /api/progress:
+    post:
+      summary: Persiste progreso y lecciones de forma transaccional
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveProgressRequest" }
+      responses:
+        "200":
+          description: Progreso guardado atómicamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        "400":
+          description: Body inválido
+        "401":
+          description: Sesión no autenticada
+        "404":
+          description: Estudiante no encontrado
+        "500":
+          description: Error interno del servidor

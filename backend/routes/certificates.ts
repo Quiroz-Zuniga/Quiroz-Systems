@@ -1,16 +1,14 @@
 import { Router } from 'express';
 import { prisma } from '../db';
 import { issueCertificateForStudent } from '../use-cases/issueCertificate';
+import { validateBody, certificateIssueSchema } from '../validation';
 
 export const certificatesRouter = Router();
 
 // Emisión segura: valida 100% en el backend y genera el UUID internamente.
 // El frontend ya NO envía studentName, ni finalGradePercent, ni el uuid.
-certificatesRouter.post('/certificates/issue', async (req, res) => {
+certificatesRouter.post('/certificates/issue', validateBody(certificateIssueSchema), async (req, res) => {
   const { courseId, courseTitle, studyHours } = req.body;
-  if (!courseId || !courseTitle) {
-    return res.status(400).json({ error: 'Faltan campos requeridos (courseId, courseTitle).' });
-  }
 
   const user = req.user!;
   const profile = await prisma.student.findUnique({ where: { id: user.id } });

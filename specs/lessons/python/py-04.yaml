@@ -1,0 +1,27 @@
+id: py-04
+title: Ciclos y Repetición
+level: Básico
+courseId: python
+language: Python
+objectives:
+  - Iterar con bucle for y range().
+exercise:
+  testCases:
+    - id: tc-1
+      input: "5"
+      output: |
+        15
+    - id: tc-2
+      input: "1"
+      output: |
+        1
+    - id: tc-3
+      input: "0"
+      output: |
+        0
+  hints:
+    - Usa range(1, n + 1).
+    - Acumula suma += i.
+approvalCriteria: Sumatoria correcta con límite inclusivo superior.
+estimatedMinutes: 60
+maxScore: 100

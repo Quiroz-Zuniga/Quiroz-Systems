@@ -1,0 +1,26 @@
+id: sql-05
+title: Agrupación de datos con GROUP BY y HAVING
+level: Intermedio
+courseId: sql
+language: SQL
+objectives:
+  - Particionamiento relacional con GROUP BY y filtros HAVING.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Python|2
+        JavaScript|2
+  hints:
+    - GROUP BY lenguaje_principal HAVING COUNT(nombre) >= 2;
+  schemaSql: |-
+    CREATE TABLE miembros_catracode (nombre TEXT, lenguaje_principal TEXT);
+    INSERT INTO miembros_catracode VALUES ('Rubén', 'Python');
+    INSERT INTO miembros_catracode VALUES ('Víctor', 'Java');
+    INSERT INTO miembros_catracode VALUES ('Eduardo', 'Python');
+    INSERT INTO miembros_catracode VALUES ('Josué', 'JavaScript');
+    INSERT INTO miembros_catracode VALUES ('Eny', 'JavaScript');
+    INSERT INTO miembros_catracode VALUES ('Carlos', 'C++');
+approvalCriteria: Agrupación por columna y filtro post-agregado con HAVING.
+estimatedMinutes: 60
+maxScore: 100

@@ -1,0 +1,32 @@
+id: sql-01
+title: Introducción a Bases de Datos y SELECT
+level: Básico
+courseId: sql
+language: SQL
+objectives:
+  - Utilizar SELECT para proyectar columnas específicas.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Rubén Quiroz|Presidente
+        Víctor López|Vicepresidente
+        Eduardo Ávila|Tesorero
+        Josué Hernández|Secretario
+  hints:
+    - SELECT nombre, cargo FROM comite_ejecutivo;
+  schemaSql: >-
+    CREATE TABLE comite_ejecutivo (id INTEGER PRIMARY KEY, nombre TEXT, cargo
+    TEXT, experiencia_anios INTEGER);
+
+    INSERT INTO comite_ejecutivo VALUES (1, 'Rubén Quiroz', 'Presidente', 3);
+
+    INSERT INTO comite_ejecutivo VALUES (2, 'Víctor López', 'Vicepresidente',
+    2);
+
+    INSERT INTO comite_ejecutivo VALUES (3, 'Eduardo Ávila', 'Tesorero', 2);
+
+    INSERT INTO comite_ejecutivo VALUES (4, 'Josué Hernández', 'Secretario', 1);
+approvalCriteria: Proyección exacta de las columnas nombre y cargo.
+estimatedMinutes: 30
+maxScore: 100

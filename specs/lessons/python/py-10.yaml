@@ -1,0 +1,27 @@
+id: py-10
+title: Clases y Objetos
+level: Avanzado
+courseId: python
+language: Python
+objectives:
+  - Definir clases y constructores __init__ con self.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        5
+        10
+      output: |
+        50
+    - id: tc-2
+      input: |-
+        3
+        3
+      output: |
+        9
+  hints:
+    - "Define def __init__(self, ancho, alto):"
+    - El método get_area(self) usa self.ancho * self.alto
+approvalCriteria: Instanciación y uso correcto de self.
+estimatedMinutes: 90
+maxScore: 100

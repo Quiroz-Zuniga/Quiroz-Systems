@@ -1,0 +1,24 @@
+id: cpp-08
+title: Punteros y Referencias
+level: Intermedio
+courseId: cpp
+language: C++
+objectives:
+  - Diferenciar dirección de memoria de valor.
+  - Declarar y usar referencias (&) y punteros (*).
+exercise:
+  testCases:
+    - id: tc-1
+      input: 5 10
+      output: |
+        10 5
+    - id: tc-2
+      input: -1 1
+      output: |
+        1 -1
+  hints:
+    - La firma es void intercambiar(int *p1, int *p2).
+    - Usa las direcciones &a y &b al llamar.
+approvalCriteria: Usar punteros explícitamente.
+estimatedMinutes: 120
+maxScore: 100

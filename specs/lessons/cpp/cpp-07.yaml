@@ -1,0 +1,28 @@
+id: cpp-07
+title: Vectores (std::vector)
+level: Intermedio
+courseId: cpp
+language: C++
+objectives:
+  - Implementar std::vector.
+  - Insertar elementos dinámicamente con push_back.
+exercise:
+  testCases:
+    - id: tc-1
+      input: 4 1 2 3 4
+      output: |
+        2 4 
+    - id: tc-2
+      input: 3 1 3 5
+      output: |+
+        
+    - id: tc-3
+      input: 2 10 20
+      output: |
+        10 20 
+  hints:
+    - Declara el vector vacío.
+    - Usa push_back para cada lectura.
+approvalCriteria: Uso correcto de std::vector y push_back.
+estimatedMinutes: 90
+maxScore: 100

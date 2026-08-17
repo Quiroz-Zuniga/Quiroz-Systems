@@ -1,0 +1,16 @@
+id: htmlcss-04
+title: Introducción a CSS y Selectores
+level: Básico
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - Reglas CSS con selectores de clase .
+exercise:
+  testCases:
+    - id: tc-1
+      output: ".resaltado { color: red }"
+  hints:
+    - ".resaltado { color: red; }"
+approvalCriteria: Aplicación de estilo de color mediante selector de clase.
+estimatedMinutes: 45
+maxScore: 100

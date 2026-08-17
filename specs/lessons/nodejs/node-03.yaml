@@ -1,0 +1,18 @@
+id: node-03
+title: El Sistema de Módulos (CommonJS)
+level: Básico
+courseId: nodejs
+language: Node.js
+objectives:
+  - Importación y exportación con require y module.exports.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        linux
+        20
+  hints:
+    - const utils = require("./utils.js");
+approvalCriteria: Importación de módulo local y nativo con require.
+estimatedMinutes: 60
+maxScore: 100

@@ -1,0 +1,26 @@
+id: js-09
+title: Scope y Closures
+level: Intermedio
+courseId: javascript
+language: JavaScript
+objectives:
+  - Crear clausuras léxicas persistentes.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        5
+        10
+      output: |
+        50
+    - id: tc-2
+      input: |-
+        3
+        3
+      output: |
+        9
+  hints:
+    - return (numero) => numero * factor;
+approvalCriteria: High Order Function retornando una clausura.
+estimatedMinutes: 90
+maxScore: 100

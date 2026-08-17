@@ -1,0 +1,26 @@
+id: js-03
+title: Control de Flujo y Operadores Estrictos
+level: Básico
+courseId: javascript
+language: JavaScript
+objectives:
+  - Condicionales con operadores de igualdad estricta ===.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "0"
+      output: |
+        Cero
+    - id: tc-2
+      input: "4"
+      output: |
+        Par
+    - id: tc-3
+      input: "-3"
+      output: |
+        Impar
+  hints:
+    - Usa === 0 para la primera comparación.
+approvalCriteria: Uso exclusivo de igualdad estricta ===.
+estimatedMinutes: 60
+maxScore: 100

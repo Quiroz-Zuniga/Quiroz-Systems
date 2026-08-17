@@ -1,0 +1,18 @@
+id: rs-05
+title: Referencias y Borrowing
+level: Intermedio
+courseId: rust
+language: Rust
+objectives:
+  - Referencias mutables con &mut.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Prueba OK
+  hints:
+    - "fn modificar_mensaje(texto: &mut String)"
+    - modificar_mensaje(&mut mensaje);
+approvalCriteria: Préstamo mutable con &mut.
+estimatedMinutes: 60
+maxScore: 100

@@ -1,0 +1,17 @@
+id: cpp-11
+title: Herencia y Polimorfismo
+level: Avanzado
+courseId: cpp
+language: C++
+objectives:
+  - Implementar herencia y funciones virtuales.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Iniciando Servidor
+  hints:
+    - Usa virtual en la clase base y override en la derivada.
+approvalCriteria: Polimorfismo dinámico correcto usando virtual y override.
+estimatedMinutes: 120
+maxScore: 100

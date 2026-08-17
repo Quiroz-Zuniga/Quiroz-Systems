@@ -1,0 +1,17 @@
+id: rs-07
+title: Enums y Pattern Matching
+level: Intermedio
+courseId: rust
+language: Rust
+objectives:
+  - Match exhaustivo sobre enums.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Detener
+  hints:
+    - Semaforo::Rojo => "Detener",
+approvalCriteria: Evaluación exhaustiva de enums con match.
+estimatedMinutes: 60
+maxScore: 100

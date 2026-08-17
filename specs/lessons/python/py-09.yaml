@@ -1,0 +1,32 @@
+id: py-09
+title: Manejo de Excepciones
+level: Intermedio
+courseId: python
+language: Python
+objectives:
+  - Atrapar errores con try, except, else, finally.
+exercise:
+  testCases:
+    - id: tc-1
+      input: |-
+        10
+        2
+      output: |
+        5
+    - id: tc-2
+      input: |-
+        5
+        0
+      output: |
+        ErrorDivZero
+    - id: tc-3
+      input: |-
+        10
+        a
+      output: |
+        ErrorValor
+  hints:
+    - "Pon int(val1) y la división en el bloque try:"
+approvalCriteria: Manejo específico de ZeroDivisionError y ValueError.
+estimatedMinutes: 60
+maxScore: 100

@@ -1,0 +1,19 @@
+id: py-14
+title: Asincronía con Asyncio
+level: Experto
+courseId: python
+language: Python
+objectives:
+  - Corrutinas asíncronas con async y await.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Descargando
+        Hecho
+  hints:
+    - "async def descargar():"
+    - asyncio.run(descargar())
+approvalCriteria: Corrutina asíncrona ejecutada con asyncio.run().
+estimatedMinutes: 100
+maxScore: 100

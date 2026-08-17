@@ -1,0 +1,28 @@
+id: js-07
+title: Objetos Literales
+level: Intermedio
+courseId: javascript
+language: JavaScript
+objectives:
+  - Diccionarios clave-valor y notación de corchetes.
+exercise:
+  testCases:
+    - id: tc-1
+      input: hola
+      output: |
+        h: 1
+        o: 1
+        l: 1
+        a: 1
+    - id: tc-2
+      input: aaabbc
+      output: |
+        a: 3
+        b: 2
+        c: 1
+  hints:
+    - Itera caracteres con for (const char of texto)
+    - Usa for (const key in conteo) para imprimir
+approvalCriteria: Uso dinámico de objetos con notación de corchetes.
+estimatedMinutes: 90
+maxScore: 100

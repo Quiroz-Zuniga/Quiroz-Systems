@@ -1,0 +1,19 @@
+id: htmlcss-10
+title: "Flexbox: Diseño Unidimensional"
+level: Avanzado
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - "Contenedor flexible con display: flex, align-items, justify-content."
+exercise:
+  testCases:
+    - id: tc-1
+      output: ".navbar { display: flex, align-items: center, justify-content:
+        space-between }"
+  hints:
+    - "display: flex;"
+    - "align-items: center;"
+    - "justify-content: space-between;"
+approvalCriteria: Distribución unidimensional con Flexbox.
+estimatedMinutes: 60
+maxScore: 100

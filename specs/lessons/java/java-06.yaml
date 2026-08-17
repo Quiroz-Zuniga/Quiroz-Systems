@@ -1,0 +1,22 @@
+id: java-06
+title: Métodos y Sobrecarga
+level: Intermedio
+courseId: java
+language: Java
+objectives:
+  - Declarar métodos estáticos reutilizables.
+exercise:
+  testCases:
+    - id: tc-1
+      input: "20"
+      output: |
+        Permitido
+    - id: tc-2
+      input: "17"
+      output: |
+        Denegado
+  hints:
+    - public static boolean esMayorDeEdad(int edad) { return edad >= 18; }
+approvalCriteria: Método estático externo invocado en main.
+estimatedMinutes: 60
+maxScore: 100

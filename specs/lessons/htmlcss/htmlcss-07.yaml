@@ -1,0 +1,17 @@
+id: htmlcss-07
+title: Posicionamiento en CSS
+level: Intermedio
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - "Contexto position: relative y position: absolute."
+exercise:
+  testCases:
+    - id: tc-1
+      output: ".padre { position: relative } | .hijo { position: absolute, bottom: 0,
+        right: 0 }"
+  hints:
+    - "bottom: 0; right: 0; en el hijo absolute."
+approvalCriteria: Anclaje de coordenadas absolutas en contenedor relativo.
+estimatedMinutes: 60
+maxScore: 100

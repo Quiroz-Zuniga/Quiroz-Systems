@@ -1,0 +1,17 @@
+id: rs-15
+title: Proyecto Integrador y Rust Avanzado (Unsafe)
+level: Experto
+courseId: rust
+language: Rust
+objectives:
+  - Integrar Structs, Enums y referencias mutables en un CLI Tareas.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Proyecto Terminado
+  hints:
+    - for t in &mut tareas { if t.id == 2 { t.estado = Estado::Completada; } }
+approvalCriteria: Integración completa con mutación in-place por préstamo &mut.
+estimatedMinutes: 180
+maxScore: 500

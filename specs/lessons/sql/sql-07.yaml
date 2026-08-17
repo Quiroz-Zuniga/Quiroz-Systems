@@ -1,0 +1,20 @@
+id: sql-07
+title: Inserción de Datos (INSERT INTO)
+level: Intermedio
+courseId: sql
+language: SQL
+objectives:
+  - DML de inserción con lista explícita de columnas.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        101|DevFest 2024|2024-11-23
+  hints:
+    - INSERT INTO certificaciones (id, nombre, fecha_emision) VALUES (101,
+      'DevFest 2024', '2024-11-23');
+  schemaSql: CREATE TABLE certificaciones (id INTEGER PRIMARY KEY, nombre TEXT,
+    fecha_emision TEXT);
+approvalCriteria: Inserción de registro DML válida.
+estimatedMinutes: 30
+maxScore: 100

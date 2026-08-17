@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import { getBearerToken, findSessionUser } from '../session';
+import { getSessionToken, findSessionUser } from '../session';
 
 // Identidad del usuario autenticado, resuelta por el token de sesión.
 export interface AuthUser {
@@ -20,7 +20,7 @@ declare global {
 }
 
 export const authRequired: RequestHandler = async (req, res, next) => {
-  const token = getBearerToken(req);
+  const token = getSessionToken(req);
   if (!token) return res.status(401).json({ error: 'No hay sesión iniciada.' });
 
   try {

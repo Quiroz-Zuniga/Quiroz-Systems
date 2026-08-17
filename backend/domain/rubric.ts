@@ -1,20 +1,12 @@
+import type { LessonAttempt } from '../../shared/contracts';
+
+// Fase B3 — LessonAttempt proviene del contrato compartido (shared/contracts.ts).
+
+export type { LessonAttempt };
+
 // Reglas de negocio de la plataforma: rúbrica 70/20/10.
 // El backend es la ÚNICA fuente de verdad para la calificación. El frontend
 // jamás debe calcular puntajes (Zero Trust). Funciones puras y testeables.
-
-export interface LessonAttempt {
-  lessonId: string;
-  attemptsCount: number;
-  hintsUnlockedCount: number;
-  timeSpentSeconds: number;
-  scoreObtained: number;
-  functionalScore: number;
-  efficiencyScore: number;
-  timeScore: number;
-  passed: boolean;
-  completedAt?: string;
-  submittedCode: string;
-}
 
 export function calculateLessonScore(params: {
   lessonId: string;

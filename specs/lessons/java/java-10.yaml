@@ -1,0 +1,17 @@
+id: java-10
+title: Clases Abstractas e Interfaces
+level: Avanzado
+courseId: java
+language: Java
+objectives:
+  - Contratos con interface e implements.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Conexión MySQL Exitosa
+  hints:
+    - interface Conectable { void conectar(); }
+approvalCriteria: Uso de interface e implements.
+estimatedMinutes: 90
+maxScore: 100

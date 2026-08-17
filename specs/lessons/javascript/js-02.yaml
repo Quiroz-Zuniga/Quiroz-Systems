@@ -1,0 +1,18 @@
+id: js-02
+title: Variables (let, const) y Tipos de Datos
+level: Básico
+courseId: javascript
+language: JavaScript
+objectives:
+  - Declarar variables con let y const.
+  - Interpolación con Template Literals.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        La edad es: 26
+  hints:
+    - "Usa backticks ` La edad es: ${edad} `"
+approvalCriteria: Interpolación de cadenas con backticks.
+estimatedMinutes: 45
+maxScore: 100

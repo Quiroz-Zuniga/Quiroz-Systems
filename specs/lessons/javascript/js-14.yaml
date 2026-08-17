@@ -1,0 +1,17 @@
+id: js-14
+title: "Estructuras de Datos Modernas: Map y Set"
+level: Experto
+courseId: javascript
+language: JavaScript
+objectives:
+  - Eliminación de duplicados con Set y spread operator.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        1 2 3 4 5
+  hints:
+    - return [...new Set(lista)];
+approvalCriteria: Uso de la clase new Set y operador spread.
+estimatedMinutes: 75
+maxScore: 100

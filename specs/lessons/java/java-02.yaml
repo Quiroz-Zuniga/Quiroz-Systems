@@ -1,0 +1,18 @@
+id: java-02
+title: Variables y Tipos de Datos Primitivos
+level: Básico
+courseId: java
+language: Java
+objectives:
+  - Declarar variables de tipos primitivos (int, double, boolean) y String.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        La edad es: 26
+  hints:
+    - int edad = anioActual - anioNacimiento;
+    - 'System.out.println("La edad es: " + edad);'
+approvalCriteria: Cálculo dinámico con concatenación de String.
+estimatedMinutes: 45
+maxScore: 100

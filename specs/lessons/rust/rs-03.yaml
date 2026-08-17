@@ -1,0 +1,17 @@
+id: rs-03
+title: Control de Flujo
+level: Básico
+courseId: rust
+language: Rust
+objectives:
+  - Sentencias if, else if, else sin paréntesis.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Par
+  hints:
+    - if numero == 0 { ... }
+approvalCriteria: Evaluación condicional estricta en Rust.
+estimatedMinutes: 45
+maxScore: 100

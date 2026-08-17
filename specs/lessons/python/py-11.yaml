@@ -1,0 +1,17 @@
+id: py-11
+title: "POO: Herencia y Polimorfismo"
+level: Avanzado
+courseId: python
+language: Python
+objectives:
+  - Herencia de clases y super().
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Servidor Online
+  hints:
+    - "class Servidor(Sistema): heredará de Sistema."
+approvalCriteria: Herencia nativa y sobrescritura de métodos.
+estimatedMinutes: 90
+maxScore: 100

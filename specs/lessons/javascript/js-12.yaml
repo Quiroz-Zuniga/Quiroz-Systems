@@ -1,0 +1,17 @@
+id: js-12
+title: "Asincronía II: Async / Await"
+level: Avanzado
+courseId: javascript
+language: JavaScript
+objectives:
+  - Sintaxis async/await sobre promesas.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Terminado
+  hints:
+    - const resultado = await simularProceso();
+approvalCriteria: Sintaxis async/await sin utilizar .then().
+estimatedMinutes: 90
+maxScore: 100

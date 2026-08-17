@@ -1,0 +1,16 @@
+id: htmlcss-12
+title: Diseño Responsivo y Media Queries
+level: Avanzado
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - "Reglas condicionales con @media (max-width: 600px)."
+exercise:
+  testCases:
+    - id: tc-1
+      output: "@media (max-width: 600px) { .caja { background-color: red } }"
+  hints:
+    - "@media (max-width: 600px) { .caja { background-color: red; } }"
+approvalCriteria: Bloque condicional @media configurado correctamente.
+estimatedMinutes: 60
+maxScore: 100

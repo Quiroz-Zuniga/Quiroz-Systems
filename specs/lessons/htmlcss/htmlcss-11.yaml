@@ -1,0 +1,17 @@
+id: htmlcss-11
+title: "CSS Grid: Diseño Bidimensional"
+level: Avanzado
+courseId: htmlcss
+language: HTML / CSS
+objectives:
+  - "Cuadrícula con display: grid, grid-template-columns y gap."
+exercise:
+  testCases:
+    - id: tc-1
+      output: ".cuadricula { display: grid, grid-template-columns: 1fr 1fr, gap: 10px
+        }"
+  hints:
+    - "grid-template-columns: 1fr 1fr;"
+approvalCriteria: Estructura bidimensional de columnas y brechas.
+estimatedMinutes: 60
+maxScore: 100

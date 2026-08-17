@@ -1,0 +1,17 @@
+id: rs-13
+title: "Lifetimes: Validando Referencias"
+level: Avanzado
+courseId: rust
+language: Rust
+objectives:
+  - Anotación de lifetimes genéricos 'a.
+exercise:
+  testCases:
+    - id: tc-1
+      output: |
+        Uno
+  hints:
+    - "fn primero<'a>(s1: &'a str, s2: &'a str) -> &'a str"
+approvalCriteria: Anotación genérica de lifetime 'a.
+estimatedMinutes: 90
+maxScore: 100

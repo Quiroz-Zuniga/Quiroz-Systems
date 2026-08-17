@@ -1,0 +1,16 @@
+id: sql-06
+title: Definición de Datos (CREATE TABLE)
+level: Intermedio
+courseId: sql
+language: SQL
+objectives:
+  - Definición DDL con PRIMARY KEY y NOT NULL.
+exercise:
+  testCases:
+    - id: tc-1
+      output: OK
+  hints:
+    - id INTEGER PRIMARY KEY, nombre TEXT NOT NULL, capacidad INTEGER
+approvalCriteria: Creación de tabla DDL válida con restricciones.
+estimatedMinutes: 45
+maxScore: 100

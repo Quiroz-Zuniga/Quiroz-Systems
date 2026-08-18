@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Award, CheckCircle2, ShieldCheck, User, Search, Bell, Settings, ChevronDown, Code2, X, Play, Trash2, Check, Sun, Moon, LogOut } from 'lucide-react';
+import { BookOpen, Award, CheckCircle2, ShieldCheck, User, Search, Bell, Settings, ChevronDown, Code2, X, Play, Trash2, Check, Sun, Moon, LogOut, Coffee } from 'lucide-react';
 import { StudentProfile } from '../types';
 import { CodeEditor } from './CodeEditor';
 import { authHeaders } from '../lib/storage';
@@ -50,22 +50,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [notifications, setNotifications] = useState([
     {
       id: 1,
-      title: 'Sistema de Verificación UUID Activo',
-      detail: 'Los certificados generados cuentan con validación oficial en SQLite.',
+      title: 'Verificación de Certificados Activa',
+      detail: 'Los certificados generados cuentan con validación oficial.',
       time: 'Hace 5 min',
       unread: true,
     },
     {
       id: 2,
-      title: 'Motor de Ejecución Sandbox Local',
-      detail: 'Compilación ultrarrápida en Python, C++, Node.js y Java.',
+      title: 'Práctica Interactiva Disponible',
+      detail: 'Ejecuta tu código directamente en los cursos de Python, C++, Node.js y Java.',
       time: 'Hace 1 hora',
       unread: true,
     },
     {
       id: 3,
       title: '8 Cursos de Especialización Habilitados',
-      detail: 'Accede a la progresión completa desde Nivel Cero hasta Capstone Project.',
+      detail: 'Accede a la progresión completa desde Nivel Cero hasta un Proyecto Final.',
       time: 'Ayer',
       unread: false,
     },
@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleRunScratchShell = async () => {
     setIsExecutingShell(true);
-    setShellOutput('Ejecutando código en el Sandbox local...');
+    setShellOutput('Ejecutando tu código...');
     try {
       const res = await fetch('/api/execute', {
         method: 'POST',
@@ -114,7 +114,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const isDark = theme === 'dark';
-  const isAdminRole = userRole !== 'STUDENT';
+  const isAdminRole = userRole === 'INSTRUCTOR' || userRole === 'SUPER_ADMIN';
+  const isTeacherRole = false; // Left as false to avoid breaking conditions
   const goHome = () => {
     if (isAdminRole) setActiveTab('admin');
     else setActiveTab('catalog');
@@ -152,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className={`h-5 w-[1px] hidden md:block ${isDark ? 'bg-[#333333]' : 'bg-gray-200'}`} />
 
           {/* Active Course Selector Chip (students only) */}
-          {!isAdminRole && (
+          {!isAdminRole && !isTeacherRole && (
             <div
               onClick={() => setActiveTab('catalog')}
               className={`hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors border ${
@@ -171,7 +172,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Center: Search Bar (students only) */}
-        {!isAdminRole && (
+        {!isAdminRole && !isTeacherRole && (
           <div className="flex-1 max-w-xl hidden lg:block">
             <div className="relative">
               <Search className={`w-4 h-4 absolute left-3 top-2.5 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
@@ -223,12 +224,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Quick Scratch Shell Button */}
           <button
             onClick={() => setIsShellOpen(true)}
-            title="Abrir Consola de Ejecución Scratch"
+            title="Abrir Consola de Ejecución"
             className={`p-2 rounded-full transition-colors relative ${
               isDark ? 'text-gray-300 hover:bg-[#262626]' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <Code2 className="w-4 h-4 text-[#1a73e8]" />
+          </button>
+
+          {/* Support / Coffee Button (Ko-fi / PayPal) */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('quiroz:open-coffee'))}
+            title="Invítanos un café (donación voluntaria)"
+            className={`px-3 py-2 rounded-full transition-colors flex items-center space-x-1.5 text-xs font-bold border ${
+              isDark
+                ? 'text-amber-400 hover:bg-amber-950/40 border-[#333333]'
+                : 'text-amber-600 hover:bg-amber-50 border-gray-200'
+            }`}
+          >
+            <Coffee className="w-4 h-4" />
+            <span className="hidden lg:inline">Apóyanos</span>
           </button>
 
           {/* Notifications Button */}
@@ -273,7 +288,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {profile.name}
               </p>
               <p className="text-[10px] text-[#1a73e8] font-medium font-mono uppercase">
-                {userRole === 'SUPER_ADMIN' ? 'SuperAdmin' : userRole === 'INSTRUCTOR' ? 'Docente' : 'Estudiante'}
+                {userRole === 'SUPER_ADMIN' ? 'Administrador' : userRole === 'INSTRUCTOR' ? 'Docente' : 'Estudiante'}
               </p>
             </div>
           </button>
@@ -295,7 +310,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className={`px-4 sm:px-6 flex items-center space-x-1 overflow-x-auto text-xs font-medium ${
         isDark ? 'bg-[#181818]' : 'bg-gray-50/70'
       }`}>
-        {!isAdminRole && (
+        {!isAdminRole && !isTeacherRole && (
         <button
           onClick={() => setActiveTab('catalog')}
           className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap ${
@@ -309,7 +324,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
         )}
 
-        {!isAdminRole && (
+        {!isAdminRole && !isTeacherRole && (
         <button
           onClick={() => setActiveTab('certificates')}
           className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap ${
@@ -332,10 +347,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>Verificador de Autenticidad (UUID)</span>
+          <span>Verificador de Certificados</span>
         </button>
 
-        {userRole !== 'STUDENT' && (
+
+
+        {isAdminRole && (
         <button
           onClick={() => setActiveTab('admin')}
           className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap ${
@@ -359,7 +376,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className={`flex items-center justify-between pb-3 border-b ${isDark ? 'border-[#333333]' : 'border-gray-200'}`}>
               <div className="flex items-center space-x-2.5">
                 <img src={logoQuiroz} alt="Quiroz Systems" className="w-6 h-6 object-contain" />
-                <h3 className="text-base font-bold text-gray-900 dark:text-white">Consola Scratch Sandbox (Quiroz Systems)</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">Consola de Práctica (Quiroz Systems)</h3>
               </div>
               <button onClick={() => setIsShellOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
                 <X className="w-5 h-5" />
@@ -409,7 +426,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {shellOutput && (
               <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 font-mono">Salida del Sandbox:</span>
+                <span className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 font-mono">Resultado:</span>
                 <pre className={`p-3 rounded-lg text-xs font-mono whitespace-pre-wrap max-h-40 overflow-y-auto border ${
                   isDark ? 'bg-[#0d0d0d] text-[#1a73e8] border-[#333333]' : 'bg-gray-900 text-green-400 border-gray-800'
                 }`}>

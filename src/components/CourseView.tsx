@@ -429,7 +429,7 @@ export const CourseView: React.FC<CourseViewProps> = ({
                   className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-5 py-2 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-2 disabled:opacity-50"
                 >
                   <Play className="w-4 h-4 fill-white" />
-                  <span>{isRunning ? 'Ejecutando Sandbox...' : 'Ejecutar Código'}</span>
+                  <span>{isRunning ? 'Ejecutando...' : 'Ejecutar Código'}</span>
                 </button>
 
                 <button

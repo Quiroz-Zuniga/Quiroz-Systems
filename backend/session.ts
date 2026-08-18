@@ -52,10 +52,28 @@ export function sessionCookieName(): string {
 export async function findSessionUser(token: string) {
   const session = await prisma.session.findUnique({
     where: { token },
-    include: { user: { include: { institution: true } } },
+    include: { user: { include: { institutions: { include: { institution: true } } } } },
   });
   if (!session || session.expiresAt < new Date()) return null;
   return session.user;
+}
+
+// Nuevo modelo de negocio: una sesión pertenece a un User (usuario estándar o admin).
+export type SessionAccount =
+  | { kind: 'user'; user: NonNullable<Awaited<ReturnType<typeof findSessionUser>>> };
+
+export async function findSessionAccount(token: string): Promise<SessionAccount | null> {
+  const session = await prisma.session.findUnique({
+    where: { token },
+    include: {
+      user: { include: { institutions: { include: { institution: true } } } },
+    },
+  });
+  if (!session || session.expiresAt < new Date()) return null;
+  if (session.user) {
+    return { kind: 'user', user: session.user };
+  }
+  return null;
 }
 
 // Fase C3 — Elimina las sesiones ya vencidas para que la tabla no crezca sin

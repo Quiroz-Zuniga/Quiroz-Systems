@@ -25,7 +25,7 @@ assessmentsRouter.post('/assessments', validateBody(assessmentSchema), async (re
     const user = req.user!;
 
     const result = await evaluateLesson({
-      studentId: user.id,
+      userId: user.id,
       courseId,
       lessonId,
       language,

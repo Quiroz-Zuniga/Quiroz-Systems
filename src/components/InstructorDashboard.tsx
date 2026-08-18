@@ -60,17 +60,39 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
     setLoading(true);
     setFetchError('');
     try {
-      const res = await fetch(`/api/admin/students?instructorEmail=${encodeURIComponent(instructorEmail)}`, {
+      const res = await fetch(`/api/institutions/users`, {
         headers: authHeaders(),
       });
       if (res.ok) {
-        setStudents((await res.json()).students);
+        const users = await res.json();
+        const mapped = users.map((u: any) => {
+          const progresses = u.courseProgresses || [];
+          const totalCertificates = progresses.filter((p: any) => p.status === 'APPROVED').length;
+          return {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            studentType: u.role,
+            institutionName: '',
+            totalCoursesStarted: progresses.length,
+            totalCertificates,
+            totalLessonsCompleted: 0, // backend no guarda lecciones por separado
+            progresses: progresses.map((p: any) => ({
+              courseId: p.courseId,
+              status: p.status,
+              passedLessonsCount: p.status === 'APPROVED' ? 100 : 0 // dummy
+            }))
+          };
+        });
+        setStudents(mapped);
+      } else if (res.status === 401 || res.status === 403) {
+        setFetchError('Sesión expirada o no tienes permisos. Por favor, inicia sesión nuevamente.');
       } else {
-        setFetchError(`El servidor respondió con error ${res.status}. Verifica que el backend esté en ejecución.`);
+        setFetchError(`El servidor respondió con error interno (${res.status}). Verifica los logs del backend.`);
       }
     } catch (e) {
       console.error(e);
-      setFetchError('No se pudo conectar con la base de datos/backend. Verifica que el servidor esté corriendo.');
+      setFetchError('No se pudo conectar con el servidor. Verifica que esté corriendo.');
     } finally {
       setLoading(false);
     }
@@ -86,10 +108,10 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
     setAdding(true);
     setAddFeedback('');
     try {
-      const res = await fetch('/api/admin/add-student', {
+      const res = await fetch('/api/institutions/add-user', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ name: newName, email: newEmail, institutionName: instName, courseIds: selectedCourses, instructorEmail }),
+        body: JSON.stringify({ name: newName, email: newEmail }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -112,23 +134,17 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
     setApproving(true);
     setApprovalFeedback('');
     try {
-      const res = await fetch('/api/admin/approve-certificate', {
+      const res = await fetch('/api/institutions/emit-recognition', {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
-          studentId: approvalModal.student.id,
-          studentName: approvalModal.student.name,
-          studentEmail: approvalModal.student.email,
+          userId: approvalModal.student.id,
           courseId: approvalModal.courseId,
-          courseTitle: approvalModal.courseTitle,
-          finalGradePercent: approvalModal.gradePercent,
-          studyHours: approvalModal.studyHours,
-          approvedBy: `Docente: ${instructorName}`,
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setApprovalFeedback(`¡Certificado emitido! UUID: ${data.certificate.uuid}`);
+        setApprovalFeedback(`¡Certificado emitido! Código de verificación: ${data.recognition.recognitionCode}`);
         await fetchStudents();
         setTimeout(() => { setApprovalModal({ open: false, gradePercent: 100, studyHours: 45 }); setApprovalFeedback(''); }, 2000);
       } else {
@@ -349,7 +365,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
                         </span>
                       </div>
                       <p className="text-gray-500 dark:text-gray-400 font-mono">Lecciones: <span className="font-bold text-[#1a73e8]">{passed}/{total}</span></p>
-                      {prog?.certificateUuid && <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">UUID: {prog.certificateUuid}</p>}
+                      {prog?.certificateUuid && <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">Código: {prog.certificateUuid}</p>}
                     </div>
                     <button onClick={() => setApprovalModal({ open: true, student: selectedStudent, courseId: course.id, courseTitle: course.title, gradePercent: prog?.finalGradePercent || 100, studyHours: course.estimatedHours })} className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2 rounded-lg transition-all shadow-sm flex items-center space-x-1.5 shrink-0">
                       <Award className="w-3.5 h-3.5" />
@@ -390,7 +406,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
               <div className="flex justify-end space-x-2 pt-3 border-t border-gray-100 dark:border-[#333333]">
                 <button type="button" onClick={() => setApprovalModal({ open: false, gradePercent: 100, studyHours: 45 })} className="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-lg">Cancelar</button>
                 <button type="submit" disabled={approving} className="px-4 py-2 text-xs font-bold bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-lg shadow-sm flex items-center space-x-1.5 disabled:opacity-50">
-                  {approving ? <span>Emitiendo...</span> : <><ShieldCheck className="w-3.5 h-3.5" /><span>Emitir Certificado UUID</span></>}
+                  {approving ? <span>Emitiendo...</span> : <><ShieldCheck className="w-3.5 h-3.5" /><span>Emitir Certificado</span></>}
                 </button>
               </div>
             </form>

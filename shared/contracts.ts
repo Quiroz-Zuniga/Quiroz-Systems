@@ -136,7 +136,7 @@ export interface StudentProfile {
 
 // --- Autenticación ----------------------------------------------------------
 
-export type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'SUPER_ADMIN';
+export type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'SUPER_ADMIN' | 'TEACHER';
 
 export interface AuthUser {
   id: string;
@@ -158,6 +158,72 @@ export interface LoginRequest {
   email: string;
   password: string;
   role?: 'STUDENT' | 'INSTRUCTOR';
+}
+
+// --- Docentes / Instituciones (suscripción mensual) -------------------------
+
+export interface TeacherProfile {
+  id: string;
+  name: string;
+  email: string;
+  institutionName: string;
+  subscriptionActive: boolean;
+  subscriptionExpiresAt?: string;
+  subscriptionStatus: 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+}
+
+export interface TeacherRegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+  institutionName: string;
+}
+
+export interface TeacherLoginRequest {
+  email: string;
+  password: string;
+}
+
+// --- Reconocimiento del docente (documento distinto al certificado) ---------
+
+export interface Recognition {
+  id: string;
+  recognitionCode: string;
+  studentId: string;
+  studentName: string;
+  courseId: string;
+  courseTitle: string;
+  teacherId: string;
+  teacherName: string;
+  institutionName: string;
+  title: string;
+  message?: string;
+  issuedAt: string;
+}
+
+export interface MonetizationConfig {
+  kofiUrl?: string;
+  paypalUrl?: string;
+  subscriptionPriceDisplay: string;
+}
+
+// --- Alumno vinculado a un docente (con progreso por curso) ----------------
+
+export interface TeacherStudentRecord {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  courses: Array<{
+    courseId: string;
+    courseTitle: string;
+    lessonCount: number;
+    passedLessons: number;
+    completionPercent: number;
+    finalGradePercent?: number;
+    timeSpentSeconds: number;
+    completed: boolean;
+  }>;
 }
 
 // --- DTOs de API (assessment y execute) -------------------------------------

@@ -12,6 +12,9 @@ import { certificatesRouter } from './routes/certificates';
 import { progressRouter } from './routes/progress';
 import { adminRouter } from './routes/admin';
 import { authRouter } from './routes/auth';
+import { coursesRouter } from './routes/courses';
+import { institutionsRouter } from './routes/institutions';
+import { monetizationRouter } from './routes/monetization';
 import { authRequired } from './middleware/auth';
 import { prisma } from './db';
 
@@ -94,6 +97,7 @@ export function buildApp(): express.Express {
     '/auth/me',
     '/auth/logout',
     '/certificates/verify',
+    '/monetization-config',
     '/health',
   ];
 
@@ -110,13 +114,15 @@ export function buildApp(): express.Express {
     return authRequired(req, res, next);
   });
 
-  // Mount API Routes
+  app.use('/api', coursesRouter);
+  app.use('/api/institutions', institutionsRouter);
   app.use('/api', executeRouter);
   app.use('/api', assessmentsRouter);
   app.use('/api', profileRouter);
   app.use('/api', certificatesRouter);
   app.use('/api', progressRouter);
   app.use('/api', authRouter);
+  app.use('/api', monetizationRouter);
   app.use('/api/admin', adminRouter);
 
   // Fase C5 — En producción sirve el frontend compilado (dist/public) desde
@@ -150,7 +156,7 @@ export function buildApp(): express.Express {
   });
 
   // Sirve los estáticos del frontend si existen (montaje de producción).
-  if (hasStaticApp) {
+  if (hasStaticApp && process.env.NODE_ENV === 'production') {
     app.use(express.static(frontendDist));
     // SPA fallback: cualquier ruta no-API cae al index.html (Rutas con Router).
     app.get('*', (req, res, next) => {

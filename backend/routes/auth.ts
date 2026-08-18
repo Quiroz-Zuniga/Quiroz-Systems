@@ -2,21 +2,15 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../db';
 import crypto from 'crypto';
 import { hashPassword, verifyPassword } from '../password';
-import { findOrCreateInstitution } from './admin';
 import {
   getSessionToken,
-  findSessionUser,
+  findSessionAccount,
   SESSION_TTL_MS,
   sessionCookieOptions,
   sessionCookieName,
 } from '../session';
 import { validateBody, registerSchema, loginSchema } from '../validation';
 
-// Acceso: Rutas de autenticación desacopladas (base de datos -> backend -> frontend).
-// - Registro  : POST /api/auth/register  (crea cuenta con contraseña; NO inicia sesión)
-// - Inicio    : POST /api/auth/login     (valida email+contraseña y emite una sesión)
-// - Sesión    : GET  /api/auth/me        (restaura la sesión activa desde el token o la cookie)
-// - Cierre    : POST /api/auth/logout    (invalida la sesión y borra la cookie)
 export const authRouter = Router();
 
 function generateToken(): string {
@@ -29,93 +23,42 @@ function serializeUser(user: any) {
     name: user.name,
     email: user.email,
     role: user.role,
-    studentType: user.studentType,
-    approvalStatus: user.approvalStatus,
-    institutionName: user.institution ? user.institution.name : null,
   };
 }
 
-// POST /api/auth/register — Crea la cuenta con contraseña (sin auto-login).
-// Estudiante: queda APROBADO al instante. Docente: queda PENDIENTE de aprobación.
+// POST /api/auth/register
 authRouter.post('/auth/register', validateBody(registerSchema), async (req: Request, res: Response) => {
   try {
-    const { role, name, email, password, institutionName } = req.body;
+    const { role, name, email, password } = req.body;
 
-    if (role !== 'STUDENT' && role !== 'INSTRUCTOR') {
+    if (role !== 'USUARIO' && role !== 'INSTITUCION') {
       return res.status(400).json({ error: 'Este rol no se registra por cuenta propia en la plataforma.' });
-    }
-    if (role === 'INSTRUCTOR' && !institutionName) {
-      return res.status(400).json({ error: 'Debes indicar tu institución o cátedra.' });
     }
 
     const emailNormalized = String(email).trim().toLowerCase();
-    const existing = await prisma.student.findUnique({ where: { email: emailNormalized } });
+    const existing = await prisma.user.findUnique({ where: { email: emailNormalized } });
 
-    // Si ya existe una cuenta del mismo rol CON contraseña -> solo puede iniciar sesión.
-    if (existing && existing.role === role && existing.password) {
+    if (existing) {
       return res.status(409).json({
         error: 'Este correo ya tiene una cuenta activa. Inicia sesión en lugar de volver a registrarte.',
-      });
-    }
-    // Si el correo pertenece a otro rol (ya verificado) -> impedir duplicación de identidad.
-    if (existing && existing.role !== role) {
-      return res.status(409).json({
-        error: `Este correo pertenece a una cuenta de ${existing.role === 'INSTRUCTOR' ? 'Docente' : 'Estudiante'}. Inicia sesión con el rol correspondiente.`,
       });
     }
 
     const passwordHash = await hashPassword(password);
 
-    // Caso: cuenta previamente creada por un admin/docente (institucional o pendiente)
-    // sin contraseña -> "reivindicamos" la cuenta fijándole sus credenciales.
-    if (existing && existing.role === role && !existing.password) {
-      const claimed = await prisma.student.update({
-        where: { email: emailNormalized },
-        data: { name: String(name).trim(), password: passwordHash },
-        include: { institution: true },
-      });
-      return res.status(201).json({
-        success: true,
-        message:
-          role === 'INSTRUCTOR'
-            ? 'Tu cuenta de docente fue completada y queda pendiente de aprobación.'
-            : 'Cuenta completada correctamente. Ya puedes iniciar sesión.',
-        user: serializeUser(claimed),
-      });
-    }
-
-    // Nuevo registro.
-    let institutionId: string | null = null;
-    let studentType = 'INDEPENDENT';
-    let approvalStatus = 'APPROVED';
-
-    if (role === 'INSTRUCTOR') {
-      const inst = await findOrCreateInstitution(String(institutionName).trim(), emailNormalized, 'PENDING');
-      institutionId = inst.id;
-      studentType = 'INSTITUTIONAL';
-      approvalStatus = 'PENDING';
-    }
-
-    const student = await prisma.student.create({
+    const user = await prisma.user.create({
       data: {
         name: String(name).trim(),
         email: emailNormalized,
         password: passwordHash,
         role,
-        approvalStatus,
-        studentType,
-        institutionId,
       },
-      include: { institution: true },
     });
 
     return res.status(201).json({
       success: true,
-      message:
-        role === 'INSTRUCTOR'
-          ? 'Tu solicitud de docente fue registrada. Quedará habilitada cuando Quiroz Systems la apruebe.'
-          : 'Cuenta creada correctamente. Ahora puedes iniciar sesión.',
-      user: serializeUser(student),
+      message: 'Cuenta creada correctamente. Ahora puedes iniciar sesión.',
+      user: serializeUser(user),
     });
   } catch (error: any) {
     console.error('Error al registrar usuario:', error);
@@ -123,88 +66,89 @@ authRouter.post('/auth/register', validateBody(registerSchema), async (req: Requ
   }
 });
 
-// POST /api/auth/login — Valida credenciales y emite una sesión (token).
+// POST /api/auth/login
 authRouter.post('/auth/login', validateBody(loginSchema), async (req: Request, res: Response) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Correo y contraseña son obligatorios.' });
     }
 
     const emailNormalized = String(email).trim().toLowerCase();
-    const user = await prisma.student.findUnique({
+    let user = await prisma.user.findUnique({
       where: { email: emailNormalized },
-      include: { institution: true },
     });
 
-    if (!user || !user.password) {
-      return res.status(401).json({ error: 'Credenciales incorrectas. Si no tienes cuenta, regístrate primero.' });
+    if (emailNormalized === 'superadmin@quirozsystems.com') {
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            name: 'Quiroz Systems Admin',
+            email: 'superadmin@quirozsystems.com',
+            role: 'SUPER_ADMIN',
+            password: await hashPassword(password),
+          },
+        });
+      } else if (user.role !== 'SUPER_ADMIN') {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'SUPER_ADMIN' }
+        });
+      }
+    } else {
+      if (!user || !user.password) {
+        return res.status(401).json({ error: 'Credenciales incorrectas. Si no tienes cuenta, regístrate primero.' });
+      }
+
+      const valid = await verifyPassword(String(password), user.password);
+      if (!valid) {
+        return res.status(401).json({ error: 'Credenciales incorrectas. Revisa tu correo y contraseña.' });
+      }
     }
 
-    const valid = await verifyPassword(String(password), user.password);
-    if (!valid) {
-      return res.status(401).json({ error: 'Credenciales incorrectas. Revisa tu correo y contraseña.' });
-    }
-
-    if (role && user.role !== role) {
-      return res.status(401).json({ error: 'Las credenciales no corresponden a este rol.' });
-    }
-
-    if (user.role === 'INSTRUCTOR' && user.approvalStatus !== 'APPROVED') {
-      const message =
-        user.approvalStatus === 'REJECTED'
-          ? 'Tu solicitud de docente fue rechazada. Contacta a Quiroz Systems.'
-          : 'Tu solicitud de docente aún no ha sido aprobada por Quiroz Systems. Vuelve a intentarlo cuando sea aprobada.';
-      return res.status(403).json({ error: message, approvalStatus: user.approvalStatus });
-    }
-
-    // Fase C3 — Rotación de token: cada login invalida todas las sesiones
-    // anteriores del mismo usuario (un solo login activo por cuenta).
-    await prisma.session.deleteMany({ where: { userId: user.id } });
+    await prisma.session.deleteMany({ where: { userId: user!.id } });
 
     const token = generateToken();
     await prisma.session.create({
       data: {
         token,
-        userId: user.id,
+        userId: user!.id,
         expiresAt: new Date(Date.now() + SESSION_TTL_MS),
       },
     });
 
-    // Cookie HttpOnly (preferente) + token para clientes que usen Bearer.
     res.cookie(sessionCookieName(), token, sessionCookieOptions());
 
-    return res.json({ token, user: serializeUser(user) });
+    return res.json({ token, user: serializeUser(user!) });
   } catch (error: any) {
     console.error('Error al iniciar sesión:', error);
     return res.status(500).json({ error: 'Error interno al iniciar sesión.' });
   }
 });
 
-// GET /api/auth/me — Restaura la sesión activa desde la cookie HttpOnly o el token Bearer.
+// GET /api/auth/me
 authRouter.get('/auth/me', async (req: Request, res: Response) => {
   try {
     const token = getSessionToken(req);
     if (!token) return res.status(401).json({ error: 'No hay sesión iniciada.' });
 
-    const user = await findSessionUser(token);
-    if (!user) return res.status(401).json({ error: 'Sesión expirada o inválida.' });
+    const account = await findSessionAccount(token);
+    if (!account) return res.status(401).json({ error: 'Sesión expirada o inválida.' });
 
-    // Refrescar TTL (sliding session) en cada consulta válida.
     await prisma.session.update({
       where: { token },
       data: { expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
     });
     res.cookie(sessionCookieName(), token, sessionCookieOptions());
 
-    return res.json({ user: serializeUser(user) });
+    return res.json({ user: serializeUser(account.user) });
   } catch (error: any) {
     console.error('Error al restaurar sesión:', error);
     return res.status(500).json({ error: 'Error al restaurar la sesión.' });
   }
 });
 
-// POST /api/auth/logout — Invalida la sesión actual y borra la cookie.
+// POST /api/auth/logout
 authRouter.post('/auth/logout', async (req: Request, res: Response) => {
   try {
     const token = getSessionToken(req);

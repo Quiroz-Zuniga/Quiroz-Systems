@@ -38,9 +38,10 @@ describe('Certificates e2e', () => {
 
     // Sembrar progreso 100% (todas las lecciones aprobadas) directamente.
     const { prisma } = await import('../backend/db');
-    const student = await prisma.student.findUnique({ where: { email: 'cert@test.com' } });
+    const user = await prisma.user.findUnique({ where: { email: 'cert@test.com' } });
+
     const progress = await prisma.courseProgress.create({
-      data: { studentId: student!.id, courseId: 'python' },
+      data: { userId: user!.id, courseId: 'python' },
     });
     for (const lesson of course.lessons) {
       await prisma.lessonAttempt.create({

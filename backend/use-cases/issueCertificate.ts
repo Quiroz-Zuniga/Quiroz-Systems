@@ -4,8 +4,8 @@ import { isCourseCompleted, getCourseMeta } from '../domain/courseRegistry';
 import { calculateCourseGrade } from '../domain/rubric';
 
 export interface IssueCertificateParams {
-  studentId: string;
-  studentName: string;
+  userId: string;
+  userName: string;
   courseId: string;
   courseTitle: string;
   studyHours?: number;
@@ -21,13 +21,13 @@ export interface IssueCertificateResult {
 // Emisión idempotente y segura: solo se otorga con progreso REAL 100% (0-100).
 // El backend recalcula la calificación final a partir de las lecciones
 // aprobadas; nunca se confía en cifras enviadas por el cliente.
-export async function issueCertificateForStudent(
+export async function issueCertificateForUser(
   params: IssueCertificateParams
 ): Promise<IssueCertificateResult> {
-  const { studentId, courseId, courseTitle, studyHours = 45 } = params;
+  const { userId, courseId, courseTitle, studyHours = 45 } = params;
 
   const progress = await prisma.courseProgress.findUnique({
-    where: { studentId_courseId: { studentId, courseId } },
+    where: { userId_courseId: { userId, courseId } },
     include: { attempts: true },
   });
 
@@ -65,13 +65,13 @@ export async function issueCertificateForStudent(
     totalMaxScore
   );
 
-  // Idempotencia: si ya existe un certificado para este (student + course), devolverlo.
+  // Idempotencia: si ya existe un certificado para este (user + course), devolverlo.
   const existing = await prisma.certificate.findFirst({
-    where: { studentId, courseId },
+    where: { userId, courseId },
   });
   if (existing) {
     await prisma.courseProgress.update({
-      where: { studentId_courseId: { studentId, courseId } },
+      where: { userId_courseId: { userId, courseId } },
       data: { finalGradePercent: finalGradePercent, certificateUuid: existing.uuid, status: 'CERTIFIED' },
     });
     return { success: true, issued: false, certificate: existing };
@@ -82,8 +82,8 @@ export async function issueCertificateForStudent(
   const cert = await prisma.certificate.create({
     data: {
       uuid,
-      studentId,
-      studentName: params.studentName,
+      userId,
+      studentName: params.userName,
       courseId,
       courseTitle,
       finalGradePercent: finalGradePercent,
@@ -98,7 +98,7 @@ export async function issueCertificateForStudent(
   });
 
   await prisma.courseProgress.update({
-    where: { studentId_courseId: { studentId, courseId } },
+    where: { userId_courseId: { userId, courseId } },
     data: { finalGradePercent: finalGradePercent, certificateUuid: cert.uuid, status: 'CERTIFIED', completionDate: new Date().toLocaleDateString('es-ES') },
   });
 

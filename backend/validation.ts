@@ -34,7 +34,7 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email,
   password,
-  role: z.enum(['STUDENT', 'INSTRUCTOR']).optional(),
+  role: z.enum(['STUDENT', 'INSTRUCTOR', 'SUPER_ADMIN']).optional(),
 });
 
 export const executeSchema = z.object({
@@ -122,21 +122,21 @@ export const adminRegisterInstructorSchema = z.object({
   institutionName: z.string().trim().min(1).max(200),
 });
 
-export const adminAddStudentSchema = z.object({
+export const adminAddUserSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email,
   institutionName: z.string().trim().max(200).optional(),
   courseIds: z.array(courseId).max(100).optional(),
 });
 
-export const adminCheckStudentTypeSchema = z.object({
+export const adminCheckUserTypeSchema = z.object({
   email,
 });
 
 export const adminApproveCertificateSchema = z.object({
-  studentId: z.string().max(120).optional(),
-  studentName: z.string().trim().min(1).max(200),
-  studentEmail: z.string().email().optional(),
+  userId: z.string().max(120).optional(),
+  userName: z.string().trim().min(1).max(200),
+  userEmail: z.string().email().optional(),
   courseId,
   courseTitle: z.string().trim().min(1).max(200),
   finalGradePercent: z.coerce.number().finite().max(100).optional(),
@@ -155,22 +155,8 @@ export const adminAddInstructorSchema = z.object({
   institutionName: z.string().trim().min(1).max(200),
 });
 
-export const adminMarkPaidSchema = z.object({
-  studentId: z.string().max(120).optional(),
-  email: z.string().email().optional(),
-  paid: z.boolean(),
-}).refine((d) => d.studentId || d.email, {
-  message: 'Estudiante requerido.',
-  path: ['studentId'],
-});
-
-export const adminPaymentConfigSchema = z.object({
-  methodName: z.string().max(200).optional(),
-  provider: z.string().max(200).optional(),
-  bankName: z.string().max(200).optional(),
-  accountNumber: z.string().max(200).optional(),
-  holderName: z.string().max(200).optional(),
-  amount: z.coerce.number().finite().nonnegative().optional(),
-  currency: z.string().max(10).optional(),
-  isActive: z.boolean().optional(),
+export const adminMonetizationConfigSchema = z.object({
+  kofiUrl: z.union([z.string().trim().url().max(300), z.literal('')]).nullable().optional(),
+  paypalUrl: z.union([z.string().trim().url().max(300), z.literal('')]).nullable().optional(),
+  subscriptionPriceDisplay: z.string().trim().min(1).max(100).optional(),
 });

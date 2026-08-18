@@ -1,21 +1,21 @@
 import { Router } from 'express';
 import { prisma } from '../db';
-import { issueCertificateForStudent } from '../use-cases/issueCertificate';
+import { issueCertificateForUser } from '../use-cases/issueCertificate';
 import { validateBody, certificateIssueSchema } from '../validation';
 
 export const certificatesRouter = Router();
 
 // Emisión segura: valida 100% en el backend y genera el UUID internamente.
-// El frontend ya NO envía studentName, ni finalGradePercent, ni el uuid.
+// El frontend ya NO envía userName, ni finalGradePercent, ni el uuid.
 certificatesRouter.post('/certificates/issue', validateBody(certificateIssueSchema), async (req, res) => {
   const { courseId, courseTitle, studyHours } = req.body;
 
   const user = req.user!;
-  const profile = await prisma.student.findUnique({ where: { id: user.id } });
+  const profile = await prisma.user.findUnique({ where: { id: user.id } });
 
-  const result = await issueCertificateForStudent({
-    studentId: user.id,
-    studentName: profile?.name || user.name,
+  const result = await issueCertificateForUser({
+    userId: user.id,
+    userName: profile?.name || user.name,
     courseId,
     courseTitle,
     studyHours,
@@ -51,7 +51,7 @@ certificatesRouter.get('/certificates', async (req, res) => {
   try {
     const user = req.user!;
     const certificates = await prisma.certificate.findMany({
-      where: { studentId: user.id },
+      where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
     });
     return res.json(certificates);

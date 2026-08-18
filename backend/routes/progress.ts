@@ -9,15 +9,15 @@ export const progressRouter = Router();
 progressRouter.get('/progress/:courseId', async (req, res) => {
   try {
     const { courseId } = req.params;
-    const student = await prisma.student.findUnique({ where: { id: req.user!.id } });
-    if (!student) {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!user) {
       return res.status(404).json({ error: 'Estudiante no encontrado.' });
     }
 
     const progress = await prisma.courseProgress.findUnique({
       where: {
-        studentId_courseId: {
-          studentId: student.id,
+        userId_courseId: {
+          userId: user.id,
           courseId,
         },
       },
@@ -96,8 +96,8 @@ progressRouter.post('/progress', validateBody(progressSchema), async (req, res) 
   try {
     const { courseId, attempts, completionDate, finalGradePercent, certificateUuid } = req.body;
 
-    const student = await prisma.student.findUnique({ where: { id: req.user!.id } });
-    if (!student) {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!user) {
       return res.status(404).json({ error: 'Estudiante no encontrado.' });
     }
 
@@ -106,13 +106,13 @@ progressRouter.post('/progress', validateBody(progressSchema), async (req, res) 
     await prisma.$transaction(async (tx) => {
       const progress = await tx.courseProgress.upsert({
         where: {
-          studentId_courseId: {
-            studentId: student.id,
+          userId_courseId: {
+            userId: user.id,
             courseId,
           },
         },
         create: {
-          studentId: student.id,
+          userId: user.id,
           courseId,
           completionDate: completionDate || null,
           finalGradePercent: finalGradePercent ? Number(finalGradePercent) : null,

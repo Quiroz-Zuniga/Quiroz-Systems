@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Course, CourseProgress, StudentProfile, Certificate } from './types';
-import { allCourses, getCourseById, freeCourseIdsForIndependent } from './data/courses';
+import { allCourses, getCourseById } from './data/courses';
 import {
   getStudentProfile,
   saveStudentProfile,
@@ -20,22 +20,22 @@ import { GradeReportView } from './components/GradeReportView';
 import { CertificateVerifier } from './components/CertificateVerifier';
 import { InstructorDashboard } from './components/InstructorDashboard';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
-import { PaymentModal } from './components/PaymentModal';
 import { LandingPage } from './components/LandingPage';
 import { LoginModal } from './components/LoginModal';
 import { RegisterModal } from './components/RegisterModal';
 import { Award, Download, ExternalLink } from 'lucide-react';
 import { downloadCertificatePdf } from './lib/pdfGenerator';
+import { CoffeeSupportModal } from './components/CoffeeSupportModal';
 import logoQuiroz from './img/logo_quiroz_systems.png';
 
-type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'SUPER_ADMIN';
+type UserRole = 'USUARIO' | 'INSTITUCION' | 'SUPER_ADMIN';
 
 export default function App() {
   // Flow State: 'splash' -> 'landing' -> 'app'
   const [flowStage, setFlowStage] = useState<'splash' | 'landing' | 'app'>('splash');
-  const [userRole, setUserRole] = useState<UserRole>('STUDENT');
+  const [userRole, setUserRole] = useState<UserRole>('USUARIO');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
-  const [initialModalRole, setInitialModalRole] = useState<UserRole>('STUDENT');
+  const [initialModalRole, setInitialModalRole] = useState<UserRole>('USUARIO');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
 
   // Sesión activa (token emitido por el backend al iniciar sesión).
@@ -50,14 +50,6 @@ export default function App() {
 
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Institutional course assignment state
-  const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
-  const [studentType, setStudentType] = useState<'INDEPENDENT' | 'INSTITUTIONAL'>('INDEPENDENT');
-  const [hasPaidAccess, setHasPaidAccess] = useState<boolean>(false);
-
-  // Paid access state for independent students
-  const [paymentCourse, setPaymentCourse] = useState<Course | null>(null);
-  
   // 5-Second Splash Screen State
   const [splashProgress, setSplashProgress] = useState<number>(0);
   const [splashText, setSplashText] = useState<string>('Inicializando plataforma educativa...');
@@ -81,9 +73,9 @@ export default function App() {
       if (pct < 25) {
         setSplashText('Cargando Quiroz Systems...');
       } else if (pct < 55) {
-        setSplashText('Inicializando motor de compilación Sandbox local...');
+        setSplashText('Preparando el entorno de aprendizaje...');
       } else if (pct < 85) {
-        setSplashText('Sincronizando base de datos SQLite y certificados UUID...');
+        setSplashText('Cargando los cursos y certificados...');
       } else {
         setSplashText('¡Entorno de Software e Ingeniería 100% listo!');
       }
@@ -96,6 +88,14 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Dirige al tab correcto según el rol (estudiante -> catálogo, docente ->
+  // panel docente, admin -> panel). Evita que un TEACHER restaurado caiga en
+  // el catálogo de estudiantes.
+  const setActiveTabForRole = (role: UserRole) => {
+    if (role === 'INSTITUCION' || role === 'SUPER_ADMIN') setActiveTab('admin');
+    else setActiveTab('catalog');
+  };
 
   // Restaurar sesión activa. Fase C3: primero se intenta con la cookie HttpOnly
     // (credentials incluido automáticamente por ser mismo-origin); si el servidor
@@ -110,6 +110,7 @@ export default function App() {
           restoredSessionRef.current = { profile, role: data.user.role };
           setProfile(profile);
           setUserRole(data.user.role);
+          setActiveTabForRole(data.user.role);
           setSessionToken(null);
           return;
         }
@@ -131,6 +132,7 @@ export default function App() {
           restoredSessionRef.current = { profile, role: data.user.role };
           setProfile(profile);
           setUserRole(data.user.role);
+          setActiveTabForRole(data.user.role);
           setSessionToken(token);
         } else {
           clearSessionToken();
@@ -143,6 +145,27 @@ export default function App() {
       }
     })();
   }, []);
+
+  const [allowedCourseIds, setAllowedCourseIds] = useState<string[]>([]);
+  
+  useEffect(() => {
+    (async () => {
+      try {
+        // Obtenemos los cursos permitidos para el usuario actual (2 o todos)
+        const headers: Record<string, string> = {};
+        const token = getSessionToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const res = await fetch('/api/courses', { headers, credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setAllowedCourseIds(data.map((c: any) => c.id));
+        }
+      } catch (e) {
+        console.error('Error fetching courses:', e);
+      }
+    })();
+  }, [userRole, sessionToken]);
 
   useEffect(() => {
     localStorage.setItem('quiroz_theme', theme);
@@ -164,15 +187,9 @@ export default function App() {
   };
 
   const handleSelectCourse = (course: Course) => {
-    // Block institutional students from accessing unassigned courses
-    if (studentType === 'INSTITUTIONAL' && assignedCourseIds.length > 0 && !assignedCourseIds.includes(course.id)) {
-      return;
-    }
-    // Independent students only have free access to 2 courses unless they paid premium; others require payment
-    if (studentType === 'INDEPENDENT' && !hasPaidAccess && !freeCourseIdsForIndependent.includes(course.id)) {
-      setPaymentCourse(course);
-      return;
-    }
+    // NUEVO MODELO DE NEGOCIO: los 8 cursos son gratuitos. Sin gating de pago
+    // ni bloqueo institucional en la UI. El único acceso restringido es el de
+    // /teacher/* (validado SIEMPRE en el backend con la suscripción activa).
     const prog = getCourseProgress(course.id);
     setSelectedCourse(course);
     setCurrentProgress(prog);
@@ -198,13 +215,13 @@ export default function App() {
     setCertificates(getAllCertificates());
   };
 
-  const handleOpenLogin = (defaultRole: UserRole = 'STUDENT') => {
+  const handleOpenLogin = (defaultRole: UserRole = 'USUARIO') => {
     setInitialModalRole(defaultRole);
     setIsRegisterModalOpen(false);
     setIsLoginModalOpen(true);
   };
 
-  const handleOpenRegister = (defaultRole: 'STUDENT' | 'INSTRUCTOR' = 'STUDENT') => {
+  const handleOpenRegister = (defaultRole: 'USUARIO' | 'INSTITUCION' = 'USUARIO') => {
     setIsLoginModalOpen(false);
     setIsRegisterModalOpen(true);
   };
@@ -228,30 +245,18 @@ export default function App() {
     // token en localStorage (menos superficie de ataque XSS). El token en
     // memoria solo se mantiene como respaldo retrocompatible para peticiones
     // Bearer; ya no se persiste.
+    // El docente SÍ persiste su token en localStorage porque sus endpoints
+    // (/teacher/*) validan la suscripción activa en el backend (authHeaders).
     setSessionToken(token ?? null);
-    if (!token) clearSessionToken();
+    if (token) saveSessionToken(token);
+    else clearSessionToken();
 
     restoredSessionRef.current = { profile: userProfile, role };
     setIsLoginModalOpen(false);
     setIsRegisterModalOpen(false);
 
-    if (role === 'STUDENT') {
-      // Fetch assigned courses for this student
-      try {
-        const authHeader: Record<string, string> = {};
-        if (token) authHeader.Authorization = `Bearer ${token}`;
-        const res = await fetch(`/api/admin/student-assigned-courses?email=${encodeURIComponent(userProfile.email)}`, {
-          headers: authHeader,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setStudentType(data.studentType || 'INDEPENDENT');
-          setAssignedCourseIds(data.assignedCourseIds || []);
-          setHasPaidAccess(Boolean(data.hasPaidAccess));
-        }
-      } catch (e) {
-        console.error('Error fetching assigned courses:', e);
-      }
+    if (role === 'USUARIO') {
+      // Todos los cursos son gratuitos: no hay asignación ni "acceso completo".
       setActiveTab('catalog');
     } else {
       setActiveTab('admin');
@@ -277,9 +282,6 @@ export default function App() {
     restoredSessionRef.current = null;
     setFlowStage('landing');
     setSelectedCourse(null);
-    setAssignedCourseIds([]);
-    setStudentType('INDEPENDENT');
-    setHasPaidAccess(false);
   };
 
   const isDark = theme === 'dark';
@@ -326,8 +328,25 @@ export default function App() {
         <LandingPage
           onOpenLogin={handleOpenLogin}
           onOpenRegister={handleOpenRegister}
-          onExploreCourses={() => handleOpenLogin('STUDENT')}
+          onExploreCourses={(course?: Course) => {
+            if (course) {
+              if (allowedCourseIds.includes(course.id) || allowedCourseIds.length === 0) {
+                // Visitante entra al curso de muestra
+                setSelectedCourse(course);
+                setCurrentProgress(getCourseProgress(course.id));
+                setViewingReport(false);
+                setActiveTab('course');
+                setFlowStage('app');
+              } else {
+                alert('Inicia sesión para ver todos los cursos gratuitos');
+                handleOpenLogin('USUARIO');
+              }
+            } else {
+              handleOpenLogin('USUARIO');
+            }
+          }}
           theme={theme}
+          allowedCourseIds={allowedCourseIds}
         />
         
         <LoginModal
@@ -345,6 +364,8 @@ export default function App() {
           onSwitchToLogin={handleSwitchToLogin}
           theme={theme}
         />
+
+        <CoffeeSupportModal theme={theme} />
       </>
     );
   }
@@ -382,14 +403,17 @@ export default function App() {
           {activeTab === 'catalog' && (
             <CourseCatalog
               courses={allCourses}
-              onSelectCourse={handleSelectCourse}
+              onSelectCourse={(course) => {
+                if (allowedCourseIds.includes(course.id) || allowedCourseIds.length === 0) {
+                  handleSelectCourse(course);
+                } else {
+                  alert('Inicia sesión para ver todos los cursos gratuitos');
+                  handleOpenLogin('USUARIO');
+                }
+              }}
               onViewReport={handleViewReport}
               searchQuery={searchQuery}
               onClearSearch={() => setSearchQuery('')}
-              assignedCourseIds={assignedCourseIds}
-              studentType={studentType}
-              freeCourseIds={freeCourseIdsForIndependent}
-              premiumAccess={hasPaidAccess}
             />
           )}
 
@@ -436,7 +460,7 @@ export default function App() {
                   </div>
                   <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Aún no tienes certificados registrados</h3>
                   <p className={`text-xs leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Completa todas las lecciones de un curso para generar tu certificado en PDF verificado con código UUID único de autenticidad.
+                    Completa todas las lecciones de un curso para generar tu certificado en PDF con un código único de verificación.
                   </p>
                   <button
                     onClick={() => setActiveTab('catalog')}
@@ -481,7 +505,7 @@ export default function App() {
                                 Estudiante: <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{profile.name}</span>
                               </p>
                               <p className="text-xs font-mono text-[#1a73e8] font-bold mt-1">
-                                UUID: {cert.uuid}
+                                Código: {cert.uuid}
                               </p>
                             </div>
                           </div>
@@ -522,7 +546,7 @@ export default function App() {
           {activeTab === 'verifier' && <CertificateVerifier />}
 
           {/* Instructor Dashboard (Docente only) */}
-          {activeTab === 'admin' && userRole === 'INSTRUCTOR' && (
+          {activeTab === 'admin' && userRole === 'INSTITUCION' && (
             <InstructorDashboard instructorEmail={profile.email} instructorName={profile.name} />
           )}
 
@@ -530,6 +554,8 @@ export default function App() {
           {activeTab === 'admin' && userRole === 'SUPER_ADMIN' && (
             <SuperAdminDashboard />
           )}
+
+
         </main>
 
         {/* Footer */}
@@ -537,17 +563,13 @@ export default function App() {
           isDark ? 'bg-[#262626] border-[#333333] text-gray-400' : 'bg-white border-gray-200 text-gray-500'
         }`}>
           <p>© 2026 Quiroz Systems — Todos los derechos reservados. Plataforma Educativa de Software.</p>
+          <p className="mt-1">
+            Los 8 cursos son gratuitos. ¿Te sirvió la plataforma? <a href="#" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent('quiroz:open-coffee')); }} className="text-[#1a73e8] font-bold hover:underline">Invítanos un café ☕</a>
+          </p>
         </footer>
       </div>
 
-      {/* Payment notification for independent students trying to access a paid course */}
-      {paymentCourse && (
-        <PaymentModal
-          course={paymentCourse}
-          onClose={() => setPaymentCourse(null)}
-          theme={theme}
-        />
-      )}
+      <CoffeeSupportModal theme={theme} />
     </div>
   );
 }

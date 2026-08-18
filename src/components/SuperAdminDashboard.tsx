@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Award, BookOpen, ShieldCheck, Search, RefreshCw, Building2, UserCheck, CheckCircle2, XCircle, Clock, Plus, X, CreditCard, DollarSign, Ban, Trash2, Save } from 'lucide-react';
+import { Users, Award, BookOpen, ShieldCheck, Search, RefreshCw, Building2, UserCheck, CheckCircle2, Clock, Plus, X, Ban, Save, GraduationCap, Coffee, Heart, CalendarClock, Zap } from 'lucide-react';
 import logoQuiroz from '../img/logo_quiroz_systems.png';
 import { authHeaders } from '../lib/storage';
 
@@ -31,24 +31,12 @@ interface InstitutionRecord {
   _count: { students: number; instructors: number };
 }
 
-interface StudentPayment {
-  id: string;
-  name: string;
-  email: string;
-  studentType: string;
-  paidAccess: boolean;
-  createdAt: string;
-}
 
-interface PaymentConfig {
-  methodName: string;
-  provider: string;
-  bankName: string;
-  accountNumber: string;
-  holderName: string;
-  amount: number;
-  currency: string;
-  isActive: boolean;
+
+interface MonetizationConfig {
+  kofiUrl: string | null;
+  paypalUrl: string | null;
+  subscriptionPriceDisplay: string;
 }
 
 interface StudentRecord {
@@ -68,13 +56,18 @@ export const SuperAdminDashboard: React.FC = () => {
   const [instructors, setInstructors] = useState<InstructorRecord[]>([]);
   const [institutions, setInstitutions] = useState<InstitutionRecord[]>([]);
   const [students, setStudents] = useState<StudentRecord[]>([]);
-  const [payments, setPayments] = useState<StudentPayment[]>([]);
-  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
+
+  const [monetization, setMonetization] = useState<MonetizationConfig>({
+    kofiUrl: null,
+    paypalUrl: null,
+    subscriptionPriceDisplay: '$9.99 USD/mes',
+  });
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const [instructorSearch, setInstructorSearch] = useState('');
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
+
   const [actionFeedback, setActionFeedback] = useState('');
 
   // Add instructor/institution modal
@@ -85,28 +78,32 @@ export const SuperAdminDashboard: React.FC = () => {
   const [adding, setAdding] = useState(false);
   const [addFeedback, setAddFeedback] = useState('');
 
+
+
   const fetchAll = async () => {
     setLoading(true);
     setFetchError('');
     try {
-      const [resO, resI, resS, resC, resSt] = await Promise.all([
+      const [resO, resI, resS, resSt] = await Promise.all([
         fetch('/api/admin/overview', { headers: authHeaders() }),
         fetch('/api/admin/instructors', { headers: authHeaders() }),
         fetch('/api/admin/institutions', { headers: authHeaders() }),
-        fetch('/api/admin/payment-config', { headers: authHeaders() }),
         fetch('/api/admin/students', { headers: authHeaders() }),
       ]);
       if (resO.ok) setOverview(await resO.json());
       if (resI.ok) setInstructors(await resI.json());
       if (resS.ok) setInstitutions((await resS.json()).institutions);
-      if (resC.ok) setPaymentConfig(await resC.json());
       if (resSt.ok) setStudents((await resSt.json()).students);
-      if (!resO.ok || !resI.ok || !resS.ok || !resC.ok || !resSt.ok) {
-        setFetchError('El servidor respondió con error. Verifica que el backend esté en ejecución.');
+      if (!resO.ok || !resI.ok || !resS.ok || !resSt.ok) {
+        if (resO.status === 401 || resO.status === 403) {
+          setFetchError('Sesión expirada o no tienes permisos. Por favor, inicia sesión nuevamente.');
+        } else {
+          setFetchError('El servidor respondió con error interno. Verifica los logs del backend.');
+        }
       }
     } catch (e) {
       console.error(e);
-      setFetchError('No se pudo conectar con la base de datos/backend. Verifica que el servidor esté corriendo.');
+      setFetchError('No se pudo conectar con el servidor. Verifica que el backend (puerto 4000) esté corriendo.');
     } finally {
       setLoading(false);
     }
@@ -114,16 +111,23 @@ export const SuperAdminDashboard: React.FC = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const fetchPayments = async () => {
+  const fetchMonetization = async () => {
     try {
-      const res = await fetch('/api/admin/payments', { headers: authHeaders() });
-      if (res.ok) setPayments((await res.json()).payments);
+      const res = await fetch('/api/monetization-config', { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setMonetization({
+          kofiUrl: data.kofiUrl || null,
+          paypalUrl: data.paypalUrl || null,
+          subscriptionPriceDisplay: data.subscriptionPriceDisplay || '$9.99 USD/mes',
+        });
+      }
     } catch (e) {
       console.error(e);
     }
   };
 
-  useEffect(() => { fetchPayments(); }, []);
+  useEffect(() => { fetchMonetization(); }, []);
 
   const handleInstructorAction = async (instructorId: string, status: 'APPROVED' | 'REJECTED') => {
     setActionFeedback('');
@@ -189,38 +193,21 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  const handleMarkPaid = async (studentId: string, paid: boolean) => {
-    setActionFeedback('');
-    try {
-      const res = await fetch('/api/admin/mark-paid', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ studentId, paid }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setActionFeedback(data.message);
-        await fetchPayments();
-        setTimeout(() => setActionFeedback(''), 3000);
-      }
-    } catch (e: any) {
-      setActionFeedback(`Error: ${e.message}`);
-    }
-  };
 
-  const handleSavePaymentConfig = async (e: React.FormEvent) => {
+  const handleSaveMonetization = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentConfig) return;
     try {
-      const res = await fetch('/api/admin/payment-config', {
+      const res = await fetch('/api/admin/monetization-config', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify(paymentConfig),
+        body: JSON.stringify(monetization),
       });
       const data = await res.json();
       if (res.ok) {
         setActionFeedback(data.message);
         setTimeout(() => setActionFeedback(''), 3000);
+      } else {
+        setActionFeedback(`Error: ${data.error || 'No se pudo guardar la configuración.'}`);
       }
     } catch (e: any) {
       setActionFeedback(`Error: ${e.message}`);
@@ -235,8 +222,6 @@ export const SuperAdminDashboard: React.FC = () => {
     (i) => i.name.toLowerCase().includes(institutionSearch.toLowerCase()) || i.code.toLowerCase().includes(institutionSearch.toLowerCase())
   );
 
-  // The platform admin never appears in payment management
-  const paymentStudents = payments.filter((s) => s.email !== 'superadmin@quirozsystems.com');
 
   const filteredStudents = students
     .filter((s) => s.email !== 'superadmin@quirozsystems.com')
@@ -269,10 +254,10 @@ export const SuperAdminDashboard: React.FC = () => {
             <span>Quiroz Systems — SuperAdmin Panel</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            Control de Docentes, Instituciones y Pagos
+            Control de Docentes, Instituciones y Suscripciones
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm max-w-2xl">
-            Aprueba o bloquea docentes e instituciones, agrega nuevos docentes y gestiona el método de pago que habilita el acceso a todos los cursos.
+            Los 8 cursos son gratuitos. Aprueba o bloquea docentes e instituciones, activa la suscripción mensual de los docentes premium y configura las donaciones Ko-fi/PayPal.
           </p>
         </div>
         <div className="flex items-center space-x-2 shrink-0">
@@ -280,7 +265,7 @@ export const SuperAdminDashboard: React.FC = () => {
             <Plus className="w-4 h-4" />
             <span>Agregar Docente</span>
           </button>
-          <button onClick={() => { fetchAll(); fetchPayments(); }} disabled={loading} className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2.5 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-2 disabled:opacity-50">
+          <button onClick={() => { fetchAll(); fetchMonetization(); }} disabled={loading} className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2.5 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-2 disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Actualizar Todo</span>
           </button>
@@ -294,7 +279,7 @@ export const SuperAdminDashboard: React.FC = () => {
       {fetchError && (
         <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono text-xs font-bold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span>{fetchError}</span>
-          <button onClick={() => { fetchAll(); fetchPayments(); }} className="text-[11px] font-bold underline hover:no-underline">Reintentar conexión</button>
+          <button onClick={() => { fetchAll(); fetchMonetization(); }} className="text-[11px] font-bold underline hover:no-underline">Reintentar conexión</button>
         </div>
       )}
 
@@ -477,7 +462,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   <th className="p-3">Estudiante</th>
                   <th className="p-3">Docente / Institución</th>
                   <th className="p-3">Modalidad</th>
-                  <th className="p-3">Cobertura de Costo</th>
+                  <th className="p-3">Acceso</th>
                   <th className="p-3">Lecciones</th>
                   <th className="p-3">Certificados</th>
                 </tr>
@@ -509,12 +494,8 @@ export const SuperAdminDashboard: React.FC = () => {
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                        s.studentType === 'INSTITUTIONAL'
-                          ? 'bg-blue-50 dark:bg-blue-950/60 text-[#1a73e8] border-blue-200 dark:border-blue-800'
-                          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                      }`}>
-                        {s.studentType === 'INSTITUTIONAL' ? 'Cubierto por Docente/Institución' : 'Cubre su propio acceso'}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase border bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
+                        100% Gratuito
                       </span>
                     </td>
                     <td className="p-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">{s.totalLessonsCompleted}</td>
@@ -527,141 +508,53 @@ export const SuperAdminDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Método de Pago */}
+
+      {/* Monetización: Donaciones Ko-fi/PayPal + precio de suscripción */}
       <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333333] rounded-xl p-6 gcp-card-shadow space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-[#333333]">
           <div className="flex items-center space-x-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900">
-              <CreditCard className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-900">
+              <Coffee className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white">Método de Pago y Acceso Completo</h2>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">Configura la membresía que los estudiantes por cuenta propia pagan para desbloquear todos los cursos.</p>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Donaciones y Suscripción (Ko-fi / PayPal)</h2>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Los 8 cursos son gratuitos; la plataforma se sostiene con donaciones voluntarias y la suscripción docente. Aquí configuras los enlaces y el precio informativo.
+              </p>
             </div>
           </div>
-          {paymentConfig && (
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
-              paymentConfig.isActive ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-            }`}>
-              {paymentConfig.isActive ? 'Método Activo' : 'Método Inactivo'}
-            </span>
-          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Config form */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center space-x-1.5">
-              <DollarSign className="w-4 h-4 text-[#1a73e8]" />
-              <span>Datos del Método de Pago</span>
-            </h3>
-            {paymentConfig ? (
-              <form onSubmit={handleSavePaymentConfig} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Nombre de la Membresía</label>
-                  <input type="text" value={paymentConfig.methodName} onChange={(e) => setPaymentConfig({ ...paymentConfig, methodName: e.target.value })} className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
-                  <input type="text" value={paymentConfig.provider} onChange={(e) => setPaymentConfig({ ...paymentConfig, provider: e.target.value })} className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Banco</label>
-                  <input type="text" value={paymentConfig.bankName} onChange={(e) => setPaymentConfig({ ...paymentConfig, bankName: e.target.value })} className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Número de Cuenta</label>
-                  <input type="text" value={paymentConfig.accountNumber} onChange={(e) => setPaymentConfig({ ...paymentConfig, accountNumber: e.target.value })} className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Titular</label>
-                  <input type="text" value={paymentConfig.holderName} onChange={(e) => setPaymentConfig({ ...paymentConfig, holderName: e.target.value })} className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Monto</label>
-                    <input type="number" step="0.01" min="0" value={paymentConfig.amount} onChange={(e) => setPaymentConfig({ ...paymentConfig, amount: parseFloat(e.target.value) || 0 })} className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Moneda</label>
-                    <select value={paymentConfig.currency} onChange={(e) => setPaymentConfig({ ...paymentConfig, currency: e.target.value })} className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]">
-                      {['USD', 'EUR', 'HNL', 'MXN', 'COP'].map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <label className="flex items-center space-x-2 cursor-pointer text-gray-700 dark:text-gray-300 font-semibold">
-                  <input type="checkbox" checked={paymentConfig.isActive} onChange={(e) => setPaymentConfig({ ...paymentConfig, isActive: e.target.checked })} className="rounded border-gray-300 text-[#1a73e8]" />
-                  <span>Método de pago activo</span>
-                </label>
-                <div className="flex justify-end sm:col-span-2 pt-2 border-t border-gray-100 dark:border-[#333333]">
-                  <button type="submit" className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-1.5">
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Guardar Método de Pago</span>
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="py-8 text-center text-xs text-gray-500 dark:text-gray-400 font-mono">Cargando configuración de pago...</div>
-            )}
+        <form onSubmit={handleSaveMonetization} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div>
+            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center space-x-1">
+              <Coffee className="w-3.5 h-3.5 text-[#ff5e5b]" />
+              <span>Enlace de Ko-fi</span>
+            </label>
+            <input type="url" value={monetization.kofiUrl || ''} onChange={(e) => setMonetization({ ...monetization, kofiUrl: e.target.value })} placeholder="https://ko-fi.com/tu_usuario" className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
+          </div>
+          <div>
+            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center space-x-1">
+              <Heart className="w-3.5 h-3.5 text-[#0070ba]" />
+              <span>Enlace de PayPal</span>
+            </label>
+            <input type="url" value={monetization.paypalUrl || ''} onChange={(e) => setMonetization({ ...monetization, paypalUrl: e.target.value })} placeholder="https://paypal.me/tu_usuario" className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
+          </div>
+          <div>
+            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center space-x-1">
+              <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Precio informativo de la suscripción docente</span>
+            </label>
+            <input type="text" value={monetization.subscriptionPriceDisplay} onChange={(e) => setMonetization({ ...monetization, subscriptionPriceDisplay: e.target.value })} placeholder="$9.99 USD/mes" className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]" />
           </div>
 
-          {/* Students paid list */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center space-x-1.5">
-              <Users className="w-4 h-4 text-[#1a73e8]" />
-              <span>Estudiantes y Licencias ({paymentStudents.length})</span>
-            </h3>
-            {paymentStudents.length === 0 ? (
-              <div className="py-8 text-center text-xs text-gray-500 dark:text-gray-400 font-mono">No hay estudiantes registrados.</div>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-                {paymentStudents.map((s) => (
-                  <div key={s.id} className="p-3 rounded-xl border border-gray-200 dark:border-[#333333] bg-gray-50 dark:bg-[#0d0d0d] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-                    <div className="min-w-0">
-                      <p className="font-bold text-gray-900 dark:text-white truncate">{s.name}</p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono truncate">{s.email}</p>
-                      <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                        s.studentType === 'INSTITUTIONAL'
-                          ? 'bg-blue-100 dark:bg-blue-950 text-[#1a73e8] border-blue-200 dark:border-blue-800'
-                          : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                      }`}>
-                        {s.studentType === 'INSTITUTIONAL' ? 'Institucional' : 'Cuenta Propia'}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2 shrink-0">
-                      {s.studentType === 'INSTITUTIONAL' ? (
-                        <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-[#1a73e8] border border-blue-200 dark:border-blue-800">
-                          Cubierto por Docente/Institución
-                        </span>
-                      ) : (
-                        <>
-                          <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${
-                            s.paidAccess
-                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                              : 'bg-gray-200 dark:bg-[#262626] text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-[#404040]'
-                          }`}>
-                            {s.paidAccess ? 'Acceso Completo (Pagado)' : 'Solo 2 Cursos'}
-                          </span>
-                          {s.paidAccess ? (
-                            <button onClick={() => handleMarkPaid(s.id, false)} className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-md text-xs transition-all inline-flex items-center space-x-1">
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Revocar</span>
-                            </button>
-                          ) : (
-                            <button onClick={() => handleMarkPaid(s.id, true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-md text-xs transition-all inline-flex items-center space-x-1">
-                              <CreditCard className="w-3.5 h-3.5" />
-                              <span>Marcar Pagado</span>
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="flex items-end justify-end sm:col-span-2">
+            <button type="submit" className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-1.5">
+              <Save className="w-3.5 h-3.5" />
+              <span>Guardar Monetización</span>
+            </button>
           </div>
-        </div>
+        </form>
       </div>
 
       {/* Add Instructor / Institution Modal */}

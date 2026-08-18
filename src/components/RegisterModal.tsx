@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { User, Building2, X, KeyRound, ShieldCheck, LogIn } from 'lucide-react';
+import { User, X, KeyRound, ShieldCheck, LogIn, GraduationCap } from 'lucide-react';
 import logoQuiroz from '../img/logo_quiroz_systems.png';
 
-// Registro de cuenta de estudiante o docente. Proceso INDEPENDIENTE del inicio de sesión:
-// crear una cuenta NO inicia sesión automáticamente; el usuario debe "iniciar sesión" después.
-type RegisterRole = 'STUDENT' | 'INSTRUCTOR';
+// Registro de cuenta de estudiante o de docente con suscripción mensual
+// (Teacher). Proceso INDEPENDIENTE del inicio de sesión: crear una cuenta NO
+// inicia sesión automáticamente; el usuario debe "iniciar sesión" después.
+type RegisterRole = 'STUDENT';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -49,10 +50,14 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/register', {
+      const endpoint = '/api/auth/register';
+      const bodyPayload: any = { role: 'STUDENT', name, email, password };
+      if (institutionName) bodyPayload.institutionName = institutionName;
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, name, email, password, institutionName }),
+        body: JSON.stringify(bodyPayload),
       });
       const data = await res.json();
 
@@ -72,8 +77,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
   const isDark = theme === 'dark';
 
   const roleButtons: { key: RegisterRole; icon: React.ReactNode; label: string }[] = [
-    { key: 'STUDENT', icon: <User className="w-3.5 h-3.5" />, label: 'Estudiante' },
-    { key: 'INSTRUCTOR', icon: <Building2 className="w-3.5 h-3.5" />, label: 'Docente' },
+    { key: 'STUDENT', icon: <User className="w-3.5 h-3.5" />, label: 'Alumno' },
   ];
 
   return (
@@ -124,9 +128,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
         }`}>
           <ShieldCheck className="w-4 h-4 text-[#1a73e8] shrink-0 mt-0.5" />
           <p className="text-[11px] leading-relaxed">
-            {role === 'INSTRUCTOR'
-              ? 'Tu solicitud de docente quedará <strong>pendiente de aprobación</strong> por Quiroz Systems. No podrás iniciar sesión hasta que sea aprobada.'
-              : 'Al crear tu cuenta podrás <strong>iniciar sesión</strong> inmediatamente con tu correo y contraseña.'}
+            Al crear tu cuenta podrás <strong>iniciar sesión</strong> inmediatamente con tu correo y contraseña.
           </p>
         </div>
 
@@ -159,11 +161,12 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             <div>
               <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
-                {role === 'INSTRUCTOR' ? 'Nombre del Docente' : 'Nombre Completo'}
+                {/* Removed dynamic label based on TEACHER */}
+                Nombre Completo
               </label>
               <input
                 type="text" required value={name} onChange={(e) => setName(e.target.value)}
-                placeholder={role === 'INSTRUCTOR' ? 'Ej: Prof. María García' : 'Ej: Juan Pérez'}
+                placeholder={'Ej: Juan Pérez'}
                 className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#1a73e8] ${
                   isDark ? 'bg-[#0d0d0d] border-[#333333] text-white' : 'bg-white border-gray-300 text-gray-900'
                 }`}
@@ -181,18 +184,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
               />
             </div>
 
-            {role === 'INSTRUCTOR' && (
-              <div>
-                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Nombre de tu Institución / Cátedra</label>
-                <input
-                  type="text" required value={institutionName} onChange={(e) => setInstitutionName(e.target.value)}
-                  placeholder="Ej: Instituto Tecnológico Quiroz"
-                  className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#1a73e8] ${
-                    isDark ? 'bg-[#0d0d0d] border-[#333333] text-white' : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                />
-              </div>
-            )}
+
 
             <div>
               <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Contraseña</label>
@@ -222,7 +214,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
               className="w-full bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold py-3 rounded-xl text-xs transition-all shadow-md flex items-center justify-center space-x-2 disabled:opacity-60"
             >
               <KeyRound className="w-4 h-4" />
-              <span>{loading ? 'Registrando...' : role === 'INSTRUCTOR' ? 'Registrar Solicitud de Docente' : 'Crear Cuenta'}</span>
+              <span>{loading ? 'Registrando...' : 'Crear Cuenta'}</span>
             </button>
           </form>
         )}

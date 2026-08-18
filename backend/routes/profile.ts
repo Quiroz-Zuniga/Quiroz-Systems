@@ -7,7 +7,7 @@ export const profileRouter = Router();
 // GET /api/profile — solo devuelve el perfil del usuario autenticado (no findFirst).
 profileRouter.get('/profile', async (req, res) => {
   try {
-    const user = await prisma.student.findUnique({ where: { id: req.user!.id } });
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
     if (!user) {
       return res.status(404).json({ error: 'Perfil no encontrado.' });
     }
@@ -24,19 +24,19 @@ profileRouter.post('/profile', validateBody(profileSchema), async (req, res) => 
 
     // A4 — Zero Trust: el estudiante se resuelve SIEMPRE desde la sesión
     // (req.user.id), nunca desde datos enviados en el body (no findFirst/email).
-    const existing = await prisma.student.findUnique({ where: { id: req.user!.id } });
+    const existing = await prisma.user.findUnique({ where: { id: req.user!.id } });
     if (!existing) {
       return res.status(404).json({ error: 'Estudiante no encontrado en la sesión.' });
     }
 
-    const updated = await prisma.student.update({
+    const updated = await prisma.user.update({
       where: { id: existing.id },
       data: { name, email },
     });
 
     return res.json({ name: updated.name, email: updated.email });
   } catch (error: any) {
-    // Email duplicado (unique de Student[email]).
+    // Email duplicado (unique de User[email]).
     if (error?.code === 'P2002') {
       return res.status(409).json({ error: 'Ese correo ya está en uso por otra cuenta.' });
     }

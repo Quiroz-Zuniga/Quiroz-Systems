@@ -1,13 +1,14 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import { getSessionToken, findSessionUser } from '../session';
+import { getSessionToken, findSessionAccount } from '../session';
+import { prisma } from '../db';
 
 // Identidad del usuario autenticado, resuelta por el token de sesión.
+// Soporta cuentas estándar (User) y admins.
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: 'STUDENT' | 'INSTRUCTOR' | 'SUPER_ADMIN';
-  studentType: string;
+  role: 'USUARIO' | 'INSTITUCION' | 'SUPER_ADMIN';
 }
 
 declare global {
@@ -24,17 +25,16 @@ export const authRequired: RequestHandler = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'No hay sesión iniciada.' });
 
   try {
-    const user = await findSessionUser(token);
-    if (!user) {
+    const account = await findSessionAccount(token);
+    if (!account) {
       return res.status(401).json({ error: 'Sesión expirada o inválida. Inicia sesión de nuevo.' });
     }
 
     req.user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as AuthUser['role'],
-      studentType: user.studentType,
+      id: account.user.id,
+      email: account.user.email,
+      name: account.user.name,
+      role: account.user.role as AuthUser['role'],
     };
     next();
   } catch (err) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Building2, ArrowRight, X, KeyRound, Crown, LogIn, ShieldCheck } from 'lucide-react';
+import { User, ArrowRight, X, KeyRound, Crown, LogIn, ShieldCheck, GraduationCap } from 'lucide-react';
 import logoQuiroz from '../img/logo_quiroz_systems.png';
 import { StudentProfile } from '../types';
 
@@ -22,7 +22,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialRole = 'STUDENT',
   theme,
 }) => {
-  const [role, setRole] = useState<UserRole>(initialRole);
+  const [role, setRole] = useState<UserRole>(initialRole === 'SUPER_ADMIN' ? 'STUDENT' : initialRole);
+  const [adminMode, setAdminMode] = useState(initialRole === 'SUPER_ADMIN');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -32,9 +33,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   // Reset fields when role changes
   useEffect(() => {
-    if (role === 'SUPER_ADMIN') {
+    if (adminMode) {
       setEmail('superadmin@quirozsystems.com');
-      setPassword('');
+      setPassword('no_password_needed');
     } else {
       setEmail('');
       setPassword('');
@@ -42,34 +43,35 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setInstructorPending(false);
     setAuthError('');
     setLoading(false);
-  }, [role]);
+  }, [role, adminMode]);
 
   if (!isOpen) return null;
 
-  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isSuperAdmin = adminMode;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     setInstructorPending(false);
 
-    // SuperAdmin: acceso directo de la plataforma (sin credenciales), se mantiene como estaba.
-    if (isSuperAdmin) {
-      onLoginSuccess({ name: 'Quiroz Systems Admin', email }, 'SUPER_ADMIN');
-      return;
-    }
-
     setLoading(true);
+    const currentRole = isSuperAdmin ? 'SUPER_ADMIN' : role;
+    
     try {
-      const res = await fetch('/api/auth/login', {
+      const endpoint = '/api/auth/login';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, password, role: currentRole }),
       });
       const data = await res.json();
 
       if (res.ok) {
-        onLoginSuccess({ name: data.user.name, email: data.user.email }, role, data.token);
+        onLoginSuccess(
+          { name: data.user?.name || email, email: data.user?.email || email },
+          currentRole,
+          data.token
+        );
       } else if (res.status === 403 && data.approvalStatus) {
         setInstructorPending(true);
         setAuthError(data.error || 'Tu solicitud de docente aún no ha sido aprobada.');
@@ -87,9 +89,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const isDark = theme === 'dark';
 
   const roleButtons: { key: UserRole; icon: React.ReactNode; label: string }[] = [
-    { key: 'STUDENT', icon: <User className="w-3.5 h-3.5" />, label: 'Estudiante' },
-    { key: 'INSTRUCTOR', icon: <Building2 className="w-3.5 h-3.5" />, label: 'Docente' },
-    { key: 'SUPER_ADMIN', icon: <Crown className="w-3.5 h-3.5" />, label: 'SuperAdmin' },
+    { key: 'STUDENT', icon: <User className="w-3.5 h-3.5" />, label: 'Alumno' },
   ];
 
   return (
@@ -116,23 +116,42 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </div>
 
         {/* Role Selector */}
-        <div className="grid grid-cols-3 gap-1.5 bg-gray-100 dark:bg-[#0d0d0d] p-1.5 rounded-xl border border-gray-200 dark:border-[#333333]">
-          {roleButtons.map((rb) => (
+        {!adminMode && (
+          <div className="grid grid-cols-2 gap-1.5 bg-gray-100 dark:bg-[#0d0d0d] p-1.5 rounded-xl border border-gray-200 dark:border-[#333333]">
+            {roleButtons.map((rb) => (
+              <button
+                key={rb.key}
+                type="button"
+                onClick={() => setRole(rb.key)}
+                className={`py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center space-x-1 ${
+                  role === rb.key
+                    ? 'bg-[#1a73e8] text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                {rb.icon}
+                <span>{rb.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Admin Header */}
+        {adminMode && (
+          <div className="p-3 rounded-xl bg-gray-100 dark:bg-[#0d0d0d] border border-gray-200 dark:border-[#333333] flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center space-x-1.5">
+              <Crown className="w-4 h-4 text-[#1a73e8]" />
+              <span>Acceso de Administración</span>
+            </span>
             <button
-              key={rb.key}
               type="button"
-              onClick={() => setRole(rb.key)}
-              className={`py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center space-x-1 ${
-                role === rb.key
-                  ? 'bg-[#1a73e8] text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              onClick={() => { setAdminMode(false); setRole(initialRole === 'SUPER_ADMIN' ? 'STUDENT' : initialRole); }}
+              className="text-[11px] font-bold text-[#1a73e8] hover:underline"
             >
-              {rb.icon}
-              <span>{rb.label}</span>
+              Volver
             </button>
-          ))}
-        </div>
+          </div>
+        )}
 
         {/* Instructor Pending Banner */}
         {instructorPending && (
@@ -144,6 +163,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <p className="text-[11px] leading-relaxed">{authError}</p>
           </div>
         )}
+
+
 
         {/* Auth Error Banner */}
         {authError && !instructorPending && (
@@ -211,6 +232,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <span className="text-[11px] text-gray-500 dark:text-gray-400">¿No tienes cuenta?{' '}</span>
             <button onClick={onSwitchToRegister} className="text-[11px] font-bold text-[#1a73e8] hover:underline">
               Regístrate aquí
+            </button>
+          </div>
+        )}
+
+        {/* Separate Admin Access */}
+        {!isSuperAdmin && (
+          <div className="pt-2 text-center border-t border-gray-100 dark:border-[#333333]">
+            <button
+              type="button"
+              onClick={() => setAdminMode(true)}
+              className="text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-[#1a73e8] hover:underline flex items-center justify-center space-x-1"
+            >
+              <Crown className="w-3 h-3" />
+              <span>Acceso de administración (separado)</span>
             </button>
           </div>
         )}

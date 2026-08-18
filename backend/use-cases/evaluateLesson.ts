@@ -25,12 +25,12 @@ export class LessonNotRegisteredError extends Error {
   }
 }
 
-export type EvaluateLessonParams = AssessmentRequest & { studentId: string };
+export type EvaluateLessonParams = AssessmentRequest & { userId: string };
 
 export type EvaluateLessonResult = AssessmentResponse;
 
 export async function evaluateLesson(params: EvaluateLessonParams): Promise<EvaluateLessonResult> {
-  const { studentId, courseId, lessonId, language, code, attemptsCount, hintsUnlockedCount, timeSpentSeconds } = params;
+  const { userId, courseId, lessonId, language, code, attemptsCount, hintsUnlockedCount, timeSpentSeconds } = params;
 
   // Zero Trust: el backend usa SOLO su propio curriculum (maxScore y tiempo).
   const meta = getCourseMeta(courseId);
@@ -66,15 +66,15 @@ export async function evaluateLesson(params: EvaluateLessonParams): Promise<Eval
 
   // NOTA: persistencia transaccional. La evaluación NO se marca como aprobada
   // salvo que el backend lo certifique.
-  const student = await prisma.student.findUnique({ where: { id: studentId } });
-  if (!student) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
     throw new Error('Estudiante no encontrado.');
   }
 
   const { courseProgress, finalGradePercent } = await prisma.$transaction(async (tx) => {
     const courseProgress = await tx.courseProgress.upsert({
-      where: { studentId_courseId: { studentId, courseId } },
-      create: { studentId, courseId },
+      where: { userId_courseId: { userId, courseId } },
+      create: { userId, courseId },
       update: {},
     });
 

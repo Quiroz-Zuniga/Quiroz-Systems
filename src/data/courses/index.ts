@@ -33,9 +33,10 @@ export const allCourses: Course[] = [
   iconifyId: iconifyMap[c.id] || 'vscode-icons:file-type-code',
 }));
 
-// Courses freely accessible to independent students (no institution / docente)
-export const freeCourseIdsForIndependent: CourseId[] = ['python', 'javascript'];
-
+// NUEVO MODELO DE NEGOCIO (2026-08): los 8 cursos son 100% GRATUITOS para
+// cualquier estudiante. Se eliminó la limitación de "2 cursos gratis" y todo
+// gating de pago (paidAccess). La plataforma se sostiene con donaciones
+// Ko-fi/PayPal y la suscripción mensual de docentes.
 export const coursesMap: Record<CourseId, Course> = allCourses.reduce(
   (acc, c) => ({ ...acc, [c.id]: c }),
   {} as Record<CourseId, Course>

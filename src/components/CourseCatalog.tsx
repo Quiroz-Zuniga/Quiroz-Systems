@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Course } from '../types';
 import { getCourseProgress } from '../lib/storage';
-import { BookOpen, Clock, Award, ChevronRight, CheckCircle2, Search, X, Filter, Lock, CreditCard } from 'lucide-react';
+import { BookOpen, Clock, Award, ChevronRight, CheckCircle2, Search, X, Filter } from 'lucide-react';
 import logoQuiroz from '../img/logo_quiroz_systems.png';
 
 interface CourseCatalogProps {
@@ -11,10 +11,6 @@ interface CourseCatalogProps {
   onViewReport: (course: Course) => void;
   searchQuery?: string;
   onClearSearch?: () => void;
-  assignedCourseIds?: string[];
-  studentType?: 'INDEPENDENT' | 'INSTITUTIONAL';
-  freeCourseIds?: string[];
-  premiumAccess?: boolean;
 }
 
 export const CourseCatalog: React.FC<CourseCatalogProps> = ({
@@ -23,10 +19,6 @@ export const CourseCatalog: React.FC<CourseCatalogProps> = ({
   onViewReport,
   searchQuery = '',
   onClearSearch,
-  assignedCourseIds = [],
-  studentType = 'INDEPENDENT',
-  freeCourseIds = [],
-  premiumAccess = false,
 }) => {
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
 
@@ -61,7 +53,7 @@ export const CourseCatalog: React.FC<CourseCatalogProps> = ({
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
             Aprende lenguajes y tecnologías clave desde nivel básico hasta nivel experto.
-            Cada curso cuenta con lecciones teóricas, sandbox de compilación remota en tiempo real, evaluaciones automáticas y certificación oficial en PDF.
+            Cada curso incluye lecciones guiadas, ejercicios interactivos, evaluaciones automáticas y certificado oficial en PDF.
           </p>
         </div>
       </div>
@@ -136,56 +128,11 @@ export const CourseCatalog: React.FC<CourseCatalogProps> = ({
             const pct = Math.round((completedCount / totalCount) * 100);
             const isCompleted = completedCount === totalCount;
 
-            // Determine if this course is locked for institutional students
-            const isInstitutionalLocked = studentType === 'INSTITUTIONAL' && assignedCourseIds.length > 0 && !assignedCourseIds.includes(course.id);
-            // Determine if this course requires payment for independent students (premium bypasses it)
-            const isPaidLocked = studentType === 'INDEPENDENT' && !premiumAccess && !freeCourseIds.includes(course.id);
-            const isLocked = isInstitutionalLocked || isPaidLocked;
-
             return (
               <div
                 key={course.id}
-                className={`bg-white dark:bg-[#262626] border rounded-xl p-6 gcp-card-shadow transition-all flex flex-col justify-between relative overflow-hidden ${
-                  isInstitutionalLocked
-                    ? 'border-gray-300 dark:border-[#333333] opacity-60 cursor-not-allowed'
-                    : isPaidLocked
-                    ? 'border-amber-300 dark:border-amber-800'
-                    : 'border-gray-200 dark:border-[#333333] gcp-glow-hover hover:border-[#1a73e8]'
-                }`}
+                className={`bg-white dark:bg-[#262626] border rounded-xl p-6 gcp-card-shadow transition-all flex flex-col justify-between relative overflow-hidden border-gray-200 dark:border-[#333333] gcp-glow-hover hover:border-[#1a73e8]`}
               >
-                {/* Institutional Locked Overlay */}
-                {isInstitutionalLocked && (
-                  <div className="absolute inset-0 z-10 bg-gray-100/70 dark:bg-[#0d0d0d]/70 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-6 space-y-3">
-                    <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-[#333333] flex items-center justify-center">
-                      <Lock className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                    </div>
-                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Curso No Asignado</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed max-w-[200px]">
-                      Este curso no fue habilitado por tu docente o institución. Comunícate con tu institución para solicitar acceso.
-                    </p>
-                  </div>
-                )}
-
-                {/* Independent Paid Overlay */}
-                {isPaidLocked && (
-                  <div className="absolute inset-0 z-10 bg-amber-50/80 dark:bg-[#0d0d0d]/70 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-6 space-y-3">
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950/70 flex items-center justify-center border border-amber-200 dark:border-amber-800">
-                      <CreditCard className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <p className="text-xs font-bold text-amber-700 dark:text-amber-300">Curso de Pago (Premium)</p>
-                    <p className="text-[11px] text-amber-700/90 dark:text-amber-200/90 leading-relaxed max-w-[200px]">
-                      Tu modalidad por cuenta propia incluye 2 cursos gratis. Paga tu membresía para desbloquear el acceso a todos los cursos.
-                    </p>
-                    <button
-                      onClick={() => onSelectCourse(course)}
-                      className="mt-1 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-1"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Ver Acceso</span>
-                    </button>
-                  </div>
-                )}
-
                 <div>
                   {/* Course Header with Real Iconify Logo */}
                   <div className="flex items-start justify-between mb-4">
@@ -199,15 +146,8 @@ export const CourseCatalog: React.FC<CourseCatalogProps> = ({
                       )}
                     </div>
                     <div className="flex items-center space-x-1.5">
-                      {isLocked && (isInstitutionalLocked ? <Lock className="w-3 h-3 text-gray-400" /> : <CreditCard className="w-3 h-3 text-amber-500" />)}
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                        isInstitutionalLocked
-                          ? 'bg-gray-100 dark:bg-[#333333] text-gray-500 dark:text-gray-400 border-gray-200 dark:border-[#404040]'
-                          : isPaidLocked
-                          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                          : 'bg-blue-50 dark:bg-blue-950/60 text-[#1a73e8] border-blue-100 dark:border-blue-900'
-                      }`}>
-                        {isPaidLocked ? 'Premium' : course.levelRange}
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800">
+                        100% Gratuito
                       </span>
                     </div>
                   </div>
@@ -258,39 +198,22 @@ export const CourseCatalog: React.FC<CourseCatalogProps> = ({
 
                 {/* Action Buttons */}
                 <div className="pt-3 border-t border-gray-100 dark:border-[#333333] flex items-center space-x-2">
-                  {isInstitutionalLocked ? (
-                    <div className="flex-1 bg-gray-200 dark:bg-[#333333] text-gray-500 dark:text-gray-400 font-bold py-2.5 px-4 rounded-lg text-xs text-center flex items-center justify-center space-x-1.5 cursor-not-allowed">
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>Bloqueado</span>
-                    </div>
-                  ) : isPaidLocked ? (
-                    <button
-                      onClick={() => onSelectCourse(course)}
-                      className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-lg text-xs transition-all shadow-sm flex items-center justify-center space-x-1.5"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Desbloquear con Pago</span>
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => onSelectCourse(course)}
-                        className="flex-1 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold py-2.5 px-4 rounded-lg text-xs transition-all shadow-sm flex items-center justify-center space-x-1.5"
-                      >
-                        <span>{completedCount > 0 ? 'Continuar Curso' : 'Iniciar Curso'}</span>
-                        <ChevronRight className="w-4 h-4 text-white" />
-                      </button>
+                  <button
+                    onClick={() => onSelectCourse(course)}
+                    className="flex-1 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold py-2.5 px-4 rounded-lg text-xs transition-all shadow-sm flex items-center justify-center space-x-1.5"
+                  >
+                    <span>{completedCount > 0 ? 'Continuar Curso' : 'Iniciar Curso'}</span>
+                    <ChevronRight className="w-4 h-4 text-white" />
+                  </button>
 
-                      {isCompleted && (
-                        <button
-                          onClick={() => onViewReport(course)}
-                          className="bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 p-2.5 rounded-lg text-xs font-bold transition-all"
-                          title="Ver Reporte y Certificado"
-                        >
-                          <Award className="w-4 h-4" />
-                        </button>
-                      )}
-                    </>
+                  {isCompleted && (
+                    <button
+                      onClick={() => onViewReport(course)}
+                      className="bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 p-2.5 rounded-lg text-xs font-bold transition-all"
+                      title="Ver Reporte y Certificado"
+                    >
+                      <Award className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
               </div>

@@ -13,7 +13,7 @@ export const TestResultsPanel: React.FC<TestResultsPanelProps> = ({ execution, i
       <div className="bg-white dark:bg-[#262626] border border-gray-200 dark:border-[#333333] rounded-xl p-6 text-center shadow-sm">
         <div className="inline-flex items-center space-x-3 text-[#1a73e8] font-mono text-xs font-semibold">
           <div className="w-4 h-4 border-2 border-[#1a73e8] border-t-transparent rounded-full animate-spin" />
-          <span>Ejecutando código en el Sandbox y evaluando casos de prueba...</span>
+          <span>Ejecutando tu código y evaluando los casos de prueba...</span>
         </div>
       </div>
     );

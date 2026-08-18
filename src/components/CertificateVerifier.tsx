@@ -41,10 +41,10 @@ export const CertificateVerifier: React.FC = () => {
           <span>Quiroz Systems — Registro de Autenticidad Oficial</span>
         </div>
         <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-          Verificador Público de Certificados (UUID)
+          Verificador Público de Certificados
         </h1>
         <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
-          Ingresa el código único de validación (UUID) impreso en el certificado para comprobar su autenticidad y los registros oficiales de aprobación.
+          Ingresa el código único impreso en el certificado para comprobar su autenticidad y los registros oficiales de aprobación.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export const CertificateVerifier: React.FC = () => {
         <form onSubmit={handleVerify} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
-              Código de Verificación UUID
+              Código de Verificación
             </label>
             <div className="relative">
               <Search className="w-5 h-5 text-gray-400 dark:text-gray-400 absolute left-3.5 top-3" />
@@ -76,7 +76,7 @@ export const CertificateVerifier: React.FC = () => {
             {loading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                <span>Consultando Registros SQLite...</span>
+                <span>Verificando certificado...</span>
               </>
             ) : (
               <>

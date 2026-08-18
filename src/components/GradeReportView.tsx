@@ -77,10 +77,10 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
     improvements.push('Reducir la dependencia de pistas progresivas para elevar el puntaje de eficiencia.');
   }
   if (parseFloat(averageAttempts) > 3) {
-    improvements.push('Practicar depuración local antes de enviar ejecuciones al sandbox.');
+    improvements.push('Practicar más ejercicios de la misma lección antes de volver a intentar la evaluación.');
   }
 
-  if (strengths.length === 0) strengths.push('Perseverancia comprobada para superar todos los test cases.');
+  if (strengths.length === 0) strengths.push('Perseverancia comprobada para superar todos los ejercicios.');
   if (improvements.length === 0) improvements.push('Continuar explorando patrones avanzados y arquitectura de producción.');
 
   const certUuid = progress.certificateUuid;
@@ -177,8 +177,8 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
               <Target className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">Rúbrica: Funcionalidad</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">70% Test Cases</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">Resolución de ejercicios</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">70% de tu calificación</p>
             </div>
           </div>
 
@@ -187,8 +187,8 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">Rúbrica: Eficiencia</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">20% Intentos/Pistas</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">Uso eficiente de intentos y pistas</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">20% de tu calificación</p>
             </div>
           </div>
 
@@ -197,8 +197,8 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">Rúbrica: Tiempo</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">10% Tiempo Estimado</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">Tiempo de resolución</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">10% de tu calificación</p>
             </div>
           </div>
         </div>
@@ -300,10 +300,10 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {certUuid ? (
                 <>
-                  Código UUID asignado: <span className="font-mono text-[#1a73e8] font-bold">{certUuid}</span>
+                  Código de verificación: <span className="font-mono text-[#1a73e8] font-bold">{certUuid}</span>
                 </>
               ) : (
-                'El código UUID se genera automáticamente al descargar tu certificado.'
+                'El código de verificación se genera automáticamente al descargar tu certificado.'
               )}
             </p>
           </div>

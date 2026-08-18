@@ -156,7 +156,7 @@ export const AdminDashboard: React.FC = () => {
 
       const data = await response.json();
       if (response.ok) {
-        setApprovalFeedback(`¡Certificado aprobado con éxito! Código UUID: ${data.certificate.uuid}`);
+        setApprovalFeedback(`¡Certificado aprobado con éxito! Código de verificación: ${data.certificate.uuid}`);
         await fetchAdminData();
         setTimeout(() => {
           setApprovalModal({ open: false, gradePercent: 100, studyHours: 45 });
@@ -192,7 +192,7 @@ export const AdminDashboard: React.FC = () => {
             Control de Instituciones, Alumnos y Certificados
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm max-w-2xl">
-            Matricula estudiantes bajo el nombre de tu Institución o cátedra docente, supervisa avances en tiempo real y aprueba certificados oficiales con código UUID en SQLite.
+            Matricula estudiantes bajo el nombre de tu Institución o cátedra docente, supervisa avances en tiempo real y aprueba certificados oficiales verificables.
           </p>
         </div>
 
@@ -281,7 +281,7 @@ export const AdminDashboard: React.FC = () => {
 
         {loading ? (
           <div className="py-12 text-center text-xs text-[#1a73e8] font-mono font-bold animate-pulse">
-            Cargando registros de estudiantes e instituciones desde SQLite...
+            Cargando registros de estudiantes e instituciones...
           </div>
         ) : filteredStudents.length === 0 ? (
           <div className="py-12 text-center text-xs text-gray-500 dark:text-gray-400 font-mono">
@@ -452,7 +452,7 @@ export const AdminDashboard: React.FC = () => {
                   ) : (
                     <>
                       <UserCheck className="w-3.5 h-3.5" />
-                      <span>Matricular Alumno en SQLite</span>
+                      <span>Matricular Alumno</span>
                     </>
                   )}
                 </button>
@@ -523,7 +523,7 @@ export const AdminDashboard: React.FC = () => {
                         </p>
                         {prog?.certificateUuid && (
                           <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                            UUID: {prog.certificateUuid}
+                            Código: {prog.certificateUuid}
                           </p>
                         )}
                       </div>
@@ -623,11 +623,11 @@ export const AdminDashboard: React.FC = () => {
                   className="px-4 py-2 text-xs font-bold bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-lg shadow-sm transition-all flex items-center space-x-1.5 disabled:opacity-50"
                 >
                   {approving ? (
-                    <span>Registrando en SQLite...</span>
+                    <span>Registrando...</span>
                   ) : (
                     <>
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Emitir Certificado UUID</span>
+                      <span>Emitir Certificado</span>
                     </>
                   )}
                 </button>

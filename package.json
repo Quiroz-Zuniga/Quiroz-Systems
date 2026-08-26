@@ -16,7 +16,7 @@
     "lint": "tsc --noEmit",
     "specs:generate": "tsx scripts/generate-lesson-specs.ts",
     "specs:check": "tsx scripts/check-lesson-specs.ts",
-    "test": "tsx --test --test-force-exit tests/**/*.test.ts"
+    "test": "tsx --test --test-force-exit tests/*.test.ts"
   },
   "dependencies": {
     "@iconify/react": "^6.0.2",

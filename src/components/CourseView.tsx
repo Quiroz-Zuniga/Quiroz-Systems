@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Course, Lesson, CourseProgress, ExecutionResult } from '../types';
 import { CodeEditor } from './CodeEditor';
 import { TestResultsPanel } from './TestResultsPanel';
+import { api } from '../lib/apiClient';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -219,35 +220,26 @@ export const CourseView: React.FC<CourseViewProps> = ({
 
       // SDD — El cliente ya NO envía testCases/schemaSql: el backend los carga
       // desde specs/lessons (fuente de verdad). Solo envía la solución.
-      const response = await fetch('/api/assessments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
-        },
-        body: JSON.stringify({
-          courseId: course.id,
-          lessonId: currentLesson.id,
-          language,
-          code: userCode,
-          attemptsCount: attemptsCount + 1,
-          hintsUnlockedCount,
-          timeSpentSeconds: elapsedSeconds,
-        }),
+      const { data: execRes, response } = await api.post<any>('/assessments', {
+        courseId: course.id,
+        lessonId: currentLesson.id,
+        language,
+        code: userCode,
+        attemptsCount: attemptsCount + 1,
+        hintsUnlockedCount,
+        timeSpentSeconds: elapsedSeconds,
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
         const status = response.status;
         if (status === 401) {
           throw new Error('Tu sesión expiró. Inicia sesión de nuevo.');
         }
-        throw new Error(errData.error || `Error HTTP ${status}`);
+        throw new Error(execRes?.error || `Error HTTP ${status}`);
       }
 
-      const execRes = await response.json();
       setExecutionResult(execRes);
-      if (execRes.grade?.passed) {
+      if (execRes?.grade?.passed) {
         applyServerGrade(execRes.grade);
       }
     } catch (err: any) {

@@ -1,23 +1,15 @@
 import { CourseProgress, StudentProfile, Certificate, CourseId } from '../types';
+import { api } from './apiClient';
 
 const STORAGE_KEYS = {
   PROFILE: 'quiroz_student_profile',
   PROGRESS: 'quiroz_course_progress_',
   CERTIFICATES: 'quiroz_issued_certificates',
-  SESSION_TOKEN: 'quiroz_session_token',
 };
 
-export function authHeaders(): Record<string, string> {
-  const token = getSessionToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 export const defaultProfile: StudentProfile = {
-  name: 'Rubén Quiroz',
-  email: 'elquiroz08@gmail.com',
+  name: 'Visitante',
+  email: '',
 };
 
 export function getStudentProfile(): StudentProfile {
@@ -32,12 +24,18 @@ export function getStudentProfile(): StudentProfile {
 
 export function saveStudentProfile(profile: StudentProfile): void {
   localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-  // Sync with SQLite backend
-  fetch('/api/profile', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(profile),
-  }).catch((e) => console.error('Error syncing profile to SQLite:', e));
+  // Sincronizar con backend (usa cookies HttpOnly automáticamente)
+  api.post('/profile', profile).catch((e) =>
+    console.error('Error syncing profile to SQLite:', e)
+  );
+}
+
+export function clearStudentProfile(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.PROFILE);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 export function getCourseProgress(courseId: CourseId): CourseProgress {
@@ -57,12 +55,10 @@ export function getCourseProgress(courseId: CourseId): CourseProgress {
 
 export function saveCourseProgress(progress: CourseProgress): void {
   localStorage.setItem(STORAGE_KEYS.PROGRESS + progress.courseId, JSON.stringify(progress));
-  // Sync with SQLite backend
-  fetch('/api/progress', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(progress),
-  }).catch((e) => console.error('Error syncing progress to SQLite:', e));
+  // Sincronizar con backend
+  api.post('/progress', progress).catch((e) =>
+    console.error('Error syncing progress to SQLite:', e)
+  );
 }
 
 export function getAllCertificates(): Certificate[] {
@@ -88,16 +84,4 @@ export function saveCertificate(cert: Certificate): void {
 
 export function resetCourseProgress(courseId: CourseId): void {
   localStorage.removeItem(STORAGE_KEYS.PROGRESS + courseId);
-}
-
-export function getSessionToken(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
-}
-
-export function saveSessionToken(token: string): void {
-  localStorage.setItem(STORAGE_KEYS.SESSION_TOKEN, token);
-}
-
-export function clearSessionToken(): void {
-  localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
 }

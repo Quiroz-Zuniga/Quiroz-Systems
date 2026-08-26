@@ -18,8 +18,13 @@ export function setupTestDatabase(name = 'shared'): void {
   mkdirSync(TEST_DB_DIR, { recursive: true });
   if (existsSync(dbPath)) unlinkSync(dbPath);
   process.env.DATABASE_URL = `file:${dbPath}`;
-  // Crea las tablas desde el schema Prisma sobre la DB temporal.
-  execSync('npx prisma db push --skip-generate --accept-data-loss', {
+  // Aplica las migraciones formales de Prisma sobre la DB temporal.
+  execSync('npx prisma migrate deploy', {
+    stdio: 'pipe',
+    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+  });
+  // Siembra los cursos y lecciones para cumplir las FKs relacionales.
+  execSync('npx tsx prisma/seed.ts', {
     stdio: 'pipe',
     env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
   });

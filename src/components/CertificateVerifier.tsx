@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, CheckCircle2, XCircle, Award, ShieldCheck, ExternalLink, RefreshCw } from 'lucide-react';
 import { Certificate } from '../types';
+import { api } from '../lib/apiClient';
 
 export const CertificateVerifier: React.FC = () => {
   const [uuidInput, setUuidInput] = useState('');
@@ -19,8 +20,7 @@ export const CertificateVerifier: React.FC = () => {
     setResult(null);
 
     try {
-      const response = await fetch(`/api/certificates/verify/${uuidInput.trim()}`);
-      const data = await response.json();
+      const { data } = await api.get<any>(`/certificates/verify/${uuidInput.trim()}`);
       setResult(data);
     } catch (err: any) {
       setResult({

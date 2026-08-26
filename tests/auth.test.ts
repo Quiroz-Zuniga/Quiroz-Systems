@@ -24,7 +24,7 @@ describe('Auth e2e', () => {
     const { status, data } = await jsonFetch(baseUrl, '/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({
-        role: 'STUDENT',
+        role: 'USUARIO',
         name: 'SDD Estudiante',
         email: 'sdd@test.com',
         password: 'Secret123!',
@@ -32,14 +32,14 @@ describe('Auth e2e', () => {
     });
     assert.equal(status, 201);
     assert.equal(data.success, true);
-    assert.equal(data.user.role, 'STUDENT');
+    assert.equal(data.user.role, 'USUARIO');
   });
 
   test('login emite token + usuario y fija cookie HttpOnly', async () => {
     const res = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
     const data = await res.json();
     assert.equal(res.status, 200);
@@ -54,7 +54,7 @@ describe('Auth e2e', () => {
     const login = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
     const cookie = login.headers.get('set-cookie') || '';
     const res = await fetch(`${baseUrl}/api/auth/me`, {
@@ -69,7 +69,7 @@ describe('Auth e2e', () => {
     const first = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
     const { token: firstToken } = await first.json();
 
@@ -77,7 +77,7 @@ describe('Auth e2e', () => {
     await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
 
     const res = await fetch(`${baseUrl}/api/auth/me`, {
@@ -90,7 +90,7 @@ describe('Auth e2e', () => {
     const login = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'sdd@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
     const { token } = await login.json();
 

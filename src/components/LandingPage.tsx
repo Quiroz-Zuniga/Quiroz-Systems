@@ -4,11 +4,11 @@ import logoQuiroz from '../img/logo_quiroz_systems.png';
 import { allCourses } from '../data/courses';
 import { Icon } from '@iconify/react';
 
-type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'SUPER_ADMIN';
+import { StudentProfile, UserRole } from '../types';
 
 interface LandingPageProps {
-  onOpenLogin: (defaultRole?: UserRole) => void;
-  onOpenRegister: (defaultRole?: 'STUDENT' | 'INSTRUCTOR') => void;
+  onOpenLogin: () => void;
+  onOpenRegister: (defaultRole?: 'USUARIO' | 'INSTITUCION') => void;
   onExploreCourses: (course?: any) => void;
   theme: 'dark' | 'light';
   allowedCourseIds?: string[];
@@ -71,15 +71,15 @@ quiroz_systems()`;
           </div>
 
           <div className="hidden md:flex items-center space-x-6 text-sm font-bold text-gray-700 dark:text-gray-300">
-            <button onClick={() => onOpenRegister('STUDENT')} className="hover:text-[#1a73e8] transition-colors">Registrarse</button>
-            <button onClick={() => onOpenLogin('STUDENT')} className="hover:text-[#1a73e8] transition-colors">Iniciar Sesión</button>
+            <button onClick={() => onOpenRegister('USUARIO')} className="hover:text-[#1a73e8] transition-colors cursor-pointer">Registrarse</button>
+            <button onClick={() => onOpenLogin()} className="hover:text-[#1a73e8] transition-colors cursor-pointer">Iniciar Sesión</button>
             <a href="#cursos" className="hover:text-[#1a73e8] transition-colors">Cursos</a>
             <a href="#suscripciones" className="hover:text-[#1a73e8] transition-colors">Suscripciones</a>
             <a href="#contacto" className="hover:text-[#1a73e8] transition-colors">Contacto</a>
           </div>
           
           <div className="md:hidden flex items-center">
-             <button onClick={() => onOpenLogin('STUDENT')} className="text-[#1a73e8] font-bold">Entrar</button>
+             <button onClick={() => onOpenLogin()} className="text-[#1a73e8] font-bold cursor-pointer">Entrar</button>
           </div>
         </div>
       </header>

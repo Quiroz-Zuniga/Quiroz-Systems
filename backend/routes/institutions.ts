@@ -2,19 +2,35 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../db';
 import { requireRole } from '../middleware/auth';
 import crypto from 'crypto';
+import { validateBody, institutionAddUserSchema, emitRecognitionSchema } from '../validation';
 
 export const institutionsRouter = Router();
 
 // Endpoints for INSTITUCION role to manage their users
 institutionsRouter.use(requireRole('INSTITUCION'));
 
-// Add user to institution
-institutionsRouter.post('/add-user', async (req: Request, res: Response) => {
+// Middleware to ensure subscription is active
+institutionsRouter.use(async (req: Request, res: Response, next) => {
   try {
-    const institutionId = req.user!.id; // El id de usuario de la institución
-    const { email, name } = req.body;
+    const institutionId = req.user!.id;
+    const sub = await prisma.subscription.findFirst({
+      where: { institution_id: institutionId, estado: 'activa' },
+    });
 
-    if (!email || !name) return res.status(400).json({ error: 'Faltan datos' });
+    if (!sub) {
+      return res.status(403).json({ error: 'Suscripción no activa o expirada.' });
+    }
+    next();
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al verificar suscripción.' });
+  }
+});
+
+// Add user to institution
+institutionsRouter.post('/add-user', validateBody(institutionAddUserSchema), async (req: Request, res: Response) => {
+  try {
+    const institutionId = req.user!.id;
+    const { email, name } = req.body;
 
     let userUser = await prisma.user.findUnique({ where: { email } });
     if (!userUser) {
@@ -23,7 +39,7 @@ institutionsRouter.post('/add-user', async (req: Request, res: Response) => {
           email,
           name,
           role: 'USUARIO',
-        }
+        },
       });
     }
 
@@ -32,14 +48,14 @@ institutionsRouter.post('/add-user', async (req: Request, res: Response) => {
       where: {
         institutionId_userId: {
           institutionId,
-          userId: userUser.id
-        }
+          userId: userUser.id,
+        },
       },
       update: {},
       create: {
         institutionId,
-        userId: userUser.id
-      }
+        userId: userUser.id,
+      },
     });
 
     res.json({ success: true, userUser });
@@ -57,10 +73,10 @@ institutionsRouter.get('/users', async (req: Request, res: Response) => {
       include: {
         user: {
           include: {
-            courseProgresses: true
-          }
-        }
-      }
+            courseProgresses: true,
+          },
+        },
+      },
     });
 
     const users = relations.map((r: any) => r.user);
@@ -71,7 +87,8 @@ institutionsRouter.get('/users', async (req: Request, res: Response) => {
 });
 
 // Emit recognition
-institutionsRouter.post('/emit-recognition', async (req: Request, res: Response) => {
+// [B-A-004] Validar que el alumno haya completado el curso (APPROVED o CERTIFIED)
+institutionsRouter.post('/emit-recognition', validateBody(emitRecognitionSchema), async (req: Request, res: Response) => {
   try {
     const institutionId = req.user!.id;
     const { userId, courseId } = req.body;
@@ -81,12 +98,12 @@ institutionsRouter.post('/emit-recognition', async (req: Request, res: Response)
       where: {
         userId_courseId: {
           userId: userId,
-          courseId
-        }
-      }
+          courseId,
+        },
+      },
     });
 
-    if (!progress || progress.status !== 'APPROVED') {
+    if (!progress || (progress.status !== 'APPROVED' && progress.status !== 'CERTIFIED')) {
       return res.status(400).json({ error: 'El alumno no ha completado este curso' });
     }
 
@@ -98,13 +115,14 @@ institutionsRouter.post('/emit-recognition', async (req: Request, res: Response)
         usuario_id: userId,
         curso_id: courseId,
         institucion_id: institutionId,
-        logo_institucion: null, // Opcional
+        logo_institucion: null,
         nombre_docente: req.user!.name,
-      }
+      },
     });
 
-    res.json({ success: true, recognition });
+    return res.json({ success: true, recognition });
   } catch (error: any) {
-    res.status(500).json({ error: 'Error al emitir reconocimiento' });
+    console.error('Error al emitir reconocimiento:', error);
+    return res.status(500).json({ error: 'Error al emitir reconocimiento' });
   }
 });

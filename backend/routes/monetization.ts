@@ -12,7 +12,12 @@ async function getOrCreateConfig() {
   let config = await prisma.monetizationConfig.findUnique({ where: { id: 'default' } });
   if (!config) {
     config = await prisma.monetizationConfig.create({
-      data: { id: 'default', kofiUrl: null, paypalUrl: null, subscriptionPriceDisplay: '$9.99 USD/mes' },
+      data: {
+        id: 'default',
+        kofiUrl: 'https://ko-fi.com/rubenisaiquiroz',
+        paypalUrl: null,
+        subscriptionPriceDisplay: '$9.99 USD/mes',
+      },
     });
   }
   return config;

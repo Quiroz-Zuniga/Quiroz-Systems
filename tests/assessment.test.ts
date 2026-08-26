@@ -55,7 +55,7 @@ describe('Evaluación Zero Trust e2e', () => {
     await jsonFetch(baseUrl, '/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({
-        role: 'STUDENT',
+        role: 'USUARIO',
         name: 'Assess Test',
         email: 'assess@test.com',
         password: 'Secret123!',
@@ -63,7 +63,7 @@ describe('Evaluación Zero Trust e2e', () => {
     });
     const login = await jsonFetch(baseUrl, '/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'assess@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'assess@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
     token = login.data.token;
   });

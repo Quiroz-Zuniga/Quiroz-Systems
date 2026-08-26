@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { getCourseMeta } from '../domain/courseRegistry';
+import { getCourseMeta, isCourseCompleted } from '../domain/courseRegistry';
 import { calculateLessonScore, calculateCourseGrade } from '../domain/rubric';
 import { getLessonSpec } from '../specs/lessonSpecs';
 import type { AssessmentRequest, AssessmentResponse, LessonAttempt } from '../../shared/contracts';
@@ -127,10 +127,18 @@ export async function evaluateLesson(params: EvaluateLessonParams): Promise<Eval
     });
     const totalMaxScore = meta?.totalMaxScore ?? 0;
     const finalGradePercent = calculateCourseGrade(attempts, totalMaxScore);
+    const passedLessonIds = attempts.map((a) => a.lessonId);
+    const completedAll = isCourseCompleted(passedLessonIds, courseId);
+
+    const updateData: any = { finalGradePercent };
+    if (completedAll && courseProgress.status === 'IN_PROGRESS') {
+      updateData.status = 'APPROVED';
+      updateData.completionDate = new Date();
+    }
 
     await tx.courseProgress.update({
       where: { id: courseProgress.id },
-      data: { finalGradePercent },
+      data: updateData,
     });
 
     return { courseProgress, finalGradePercent };

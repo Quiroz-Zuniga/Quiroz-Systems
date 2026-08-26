@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Users, Award, BookOpen, ShieldCheck, CheckCircle2, Search, ExternalLink, RefreshCw, ChevronRight, UserCheck, AlertCircle, Plus, Building2 } from 'lucide-react';
 import { allCourses } from '../data/courses';
 import logoQuiroz from '../img/logo_quiroz_systems.png';
-import { authHeaders } from '../lib/storage';
+import { api } from '../lib/apiClient';
 
 interface OverviewStats {
   totalStudents: number;
@@ -66,31 +66,35 @@ export const AdminDashboard: React.FC = () => {
   const [approving, setApproving] = useState<boolean>(false);
   const [approvalFeedback, setApprovalFeedback] = useState<string>('');
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       const [resOverview, resStudents] = await Promise.all([
-        fetch('/api/admin/overview', { headers: authHeaders() }),
-        fetch('/api/admin/students', { headers: authHeaders() }),
+        api.get<OverviewStats>('/admin/overview', { signal }),
+        api.get<{ students: StudentRecord[] }>('/admin/students', { signal }),
       ]);
 
-      if (resOverview.ok) {
-        const dataOverview = await resOverview.json();
-        setOverview(dataOverview);
+      if (resOverview.response.ok && resOverview.data) {
+        setOverview(resOverview.data);
       }
-      if (resStudents.ok) {
-        const dataStudents = await resStudents.json();
-        setStudents(dataStudents.students);
+      if (resStudents.response.ok && resStudents.data?.students) {
+        setStudents(resStudents.data.students);
       }
-    } catch (e) {
-      console.error('Error fetching admin data:', e);
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        console.error('Error fetching admin data:', e);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAdminData();
+    const controller = new AbortController();
+    fetchAdminData(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleAddStudentSubmit = async (e: React.FormEvent) => {
@@ -101,19 +105,12 @@ export const AdminDashboard: React.FC = () => {
     setAddFeedback('');
 
     try {
-      const res = await fetch('/api/admin/add-student', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: newStudentName,
-          email: newStudentEmail,
-          institutionName,
-          courseIds: selectedCourses,
-        }),
+      const { data, response } = await api.post('/institutions/add-user', {
+        name: newStudentName,
+        email: newStudentEmail,
       });
-      const data = await res.json();
-      if (res.ok) {
-        setAddFeedback(`¡Alumno ${newStudentName} matriculado exitosamente en ${institutionName}!`);
+      if (response.ok) {
+        setAddFeedback(`¡Alumno ${newStudentName} matriculado exitosamente!`);
         await fetchAdminData();
         setTimeout(() => {
           setIsAddStudentOpen(false);
@@ -122,7 +119,7 @@ export const AdminDashboard: React.FC = () => {
           setAddFeedback('');
         }, 1500);
       } else {
-        setAddFeedback(`Error: ${data.error}`);
+        setAddFeedback(`Error: ${data?.error || 'No se pudo agregar alumno'}`);
       }
     } catch (err: any) {
       setAddFeedback(`Error de red: ${err.message}`);
@@ -139,31 +136,20 @@ export const AdminDashboard: React.FC = () => {
     setApprovalFeedback('');
 
     try {
-      const response = await fetch('/api/admin/approve-certificate', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          studentId: approvalModal.student.id,
-          studentName: approvalModal.student.name,
-          studentEmail: approvalModal.student.email,
-          courseId: approvalModal.courseId,
-          courseTitle: approvalModal.courseTitle,
-          finalGradePercent: approvalModal.gradePercent,
-          studyHours: approvalModal.studyHours,
-          approvedBy: 'Panel Controlador Docente — Quiroz Systems',
-        }),
+      const { data, response } = await api.post('/institutions/emit-recognition', {
+        userId: approvalModal.student.id,
+        courseId: approvalModal.courseId,
       });
 
-      const data = await response.json();
       if (response.ok) {
-        setApprovalFeedback(`¡Certificado aprobado con éxito! Código de verificación: ${data.certificate.uuid}`);
+        setApprovalFeedback(`¡Reconocimiento emitido con éxito! Código: ${data.recognition.recognitionCode}`);
         await fetchAdminData();
         setTimeout(() => {
           setApprovalModal({ open: false, gradePercent: 100, studyHours: 45 });
           setApprovalFeedback('');
         }, 2000);
       } else {
-        setApprovalFeedback(`Error: ${data.error}`);
+        setApprovalFeedback(`Error: ${data?.error || 'No se pudo emitir reconocimiento'}`);
       }
     } catch (err: any) {
       setApprovalFeedback(`Error de red: ${err.message}`);

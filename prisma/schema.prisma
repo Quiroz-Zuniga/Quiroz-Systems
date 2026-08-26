@@ -6,16 +6,16 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
-
 model Institution {
   id                         String   @id @default(uuid())
   nombre                     String
   logo_url                   String?
   nombre_docente_responsable String?
-  plan_activo                Boolean  @default(false)
   createdAt                  DateTime @default(now())
 
-  students InstitutionStudent[]
+  students      InstitutionStudent[]
+  subscriptions Subscription[]
+  recognitions  Recognition[]
 }
 
 model User {
@@ -23,7 +23,7 @@ model User {
   name      String
   email     String   @unique
   password  String?
-  role      String   @default("USUARIO") // USUARIO | INSTITUCION | SUPER_ADMIN
+  role      String   @default("USUARIO") // USUARIO | PENDIENTE_INSTITUCION | INSTITUCION | SUPER_ADMIN
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -46,8 +46,47 @@ model InstitutionStudent {
 }
 
 model Course {
-  id         String  @id @default(uuid())
-  es_muestra Boolean @default(false)
+  id             String   @id
+  title          String
+  languageName   String
+  monacoLanguage String
+  description    String
+  levelRange     String
+  estimatedHours Int
+  iconName       String
+  iconifyId      String?
+  color          String
+  es_muestra     Boolean  @default(false)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lessons          Lesson[]
+  courseProgresses CourseProgress[]
+  certificates     Certificate[]
+  recognitions     Recognition[]
+}
+
+model Lesson {
+  id               String   @id
+  courseId         String
+  title            String
+  level            String
+  order            Int      @default(0)
+  estimatedMinutes Int      @default(15)
+  maxScore         Float    @default(100)
+  approvalCriteria String?
+  theory           String?
+  objectives       String?  // JSON string
+  examples         String?  // JSON string
+  exercise         String?  // JSON string
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  course   Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attempts LessonAttempt[]
+
+  @@index([courseId])
 }
 
 model Session {
@@ -81,27 +120,33 @@ model Recognition {
   nombre_docente   String?
   fecha_emision    DateTime @default(now())
 
-  user User @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  course      Course       @relation(fields: [curso_id], references: [id], onDelete: Cascade)
+  institution Institution? @relation(fields: [institucion_id], references: [id], onDelete: SetNull)
 
   @@index([usuario_id])
+  @@index([curso_id])
+  @@index([institucion_id])
 }
 
 model CourseProgress {
-  id                String          @id @default(uuid())
+  id                String    @id @default(uuid())
   userId            String
   courseId          String
-  status            String          @default("IN_PROGRESS")
-  startDate         DateTime        @default(now())
-  completionDate    String?
+  status            String    @default("IN_PROGRESS") // IN_PROGRESS | APPROVED | CERTIFIED
+  startDate         DateTime  @default(now())
+  completionDate    DateTime?
   finalGradePercent Float?
   certificateUuid   String?
   approvedBy        String?
-  approvalDate      String?
+  approvalDate      DateTime?
 
   user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   attempts LessonAttempt[]
 
   @@unique([userId, courseId])
+  @@index([courseId])
 }
 
 model LessonAttempt {
@@ -120,8 +165,10 @@ model LessonAttempt {
   submittedCode      String
 
   courseProgress CourseProgress @relation(fields: [courseProgressId], references: [id], onDelete: Cascade)
+  lesson         Lesson?        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([courseProgressId, lessonId])
+  @@index([lessonId])
 }
 
 model Certificate {
@@ -132,9 +179,45 @@ model Certificate {
   courseTitle       String
   finalGradePercent Float
   studyHours        Int
-  issueDate         String
+  issueDate         DateTime @default(now())
   approvedBy        String?  @default("Quiroz Systems Admin")
   createdAt         DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([courseId])
+}
+
+model Subscription {
+  id                     String    @id @default(uuid())
+  institution_id         String
+  plan                   String    // BASICO, ESTANDAR, PREMIUM
+  max_alumnos            Int
+  estado                 String    // activa, vencida, cancelada, pendiente_pago
+  fecha_inicio           DateTime?
+  fecha_expiracion       DateTime?
+  paypal_subscription_id String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  institution  Institution   @relation(fields: [institution_id], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([institution_id])
+}
+
+model Transaction {
+  id                String   @id @default(uuid())
+  subscription_id   String
+  monto             Float
+  moneda            String
+  estado            String   // completado, fallido, reembolsado
+  fecha             DateTime @default(now())
+  referencia_paypal String?
+
+  subscription Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+
+  @@index([subscription_id])
 }

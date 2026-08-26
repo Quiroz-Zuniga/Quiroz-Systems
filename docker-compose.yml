@@ -25,8 +25,7 @@ services:
 
   piston_api:
     image: ghcr.io/engineer-man/piston:latest
-    ports:
-      - "2000:2000"
+    # [B-B-005] Puerto 2000 cerrado al host; comunicación solo en red interna de Docker.
     volumes:
       - piston_packages:/piston/packages
     restart: always

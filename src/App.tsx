@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
-import { Course, CourseProgress, StudentProfile, Certificate } from './types';
+import { Course, CourseProgress, StudentProfile, Certificate, UserRole } from './types';
 import { allCourses, getCourseById } from './data/courses';
 import {
   getStudentProfile,
   saveStudentProfile,
+  clearStudentProfile,
+  defaultProfile,
   getCourseProgress,
   saveCourseProgress,
   getAllCertificates,
   saveCertificate,
-  getSessionToken,
-  saveSessionToken,
-  clearSessionToken,
 } from './lib/storage';
+import { api, onUnauthorized } from './lib/apiClient';
 import { Navbar } from './components/Navbar';
 import { CourseCatalog } from './components/CourseCatalog';
 import { CourseView } from './components/CourseView';
@@ -28,18 +28,13 @@ import { downloadCertificatePdf } from './lib/pdfGenerator';
 import { CoffeeSupportModal } from './components/CoffeeSupportModal';
 import logoQuiroz from './img/logo_quiroz_systems.png';
 
-type UserRole = 'USUARIO' | 'INSTITUCION' | 'SUPER_ADMIN';
-
 export default function App() {
   // Flow State: 'splash' -> 'landing' -> 'app'
   const [flowStage, setFlowStage] = useState<'splash' | 'landing' | 'app'>('splash');
   const [userRole, setUserRole] = useState<UserRole>('USUARIO');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
-  const [initialModalRole, setInitialModalRole] = useState<UserRole>('USUARIO');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
 
-  // Sesión activa (token emitido por el backend al iniciar sesión).
-  const [sessionToken, setSessionToken] = useState<string | null>(getSessionToken());
   const restoredSessionRef = useRef<{ profile: StudentProfile; role: UserRole } | null>(null);
 
   const [profile, setProfile] = useState<StudentProfile>(getStudentProfile());
@@ -89,61 +84,35 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Dirige al tab correcto según el rol (estudiante -> catálogo, docente ->
-  // panel docente, admin -> panel). Evita que un TEACHER restaurado caiga en
-  // el catálogo de estudiantes.
   const setActiveTabForRole = (role: UserRole) => {
     if (role === 'INSTITUCION' || role === 'SUPER_ADMIN') setActiveTab('admin');
     else setActiveTab('catalog');
   };
 
-  // Restaurar sesión activa. Fase C3: primero se intenta con la cookie HttpOnly
-    // (credentials incluido automáticamente por ser mismo-origin); si el servidor
-    // no la reconoce, se cae al token Bearer guardado (retrocompatibilidad).
+  // Restaurar sesión activa mediante cookie HttpOnly
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          const profile: StudentProfile = { name: data.user.name, email: data.user.email };
-          restoredSessionRef.current = { profile, role: data.user.role };
-          setProfile(profile);
+        const { data, response: res } = await api.get<any>('/auth/me');
+        if (res.ok && data?.user) {
+          const profileData: StudentProfile = { name: data.user.name, email: data.user.email };
+          restoredSessionRef.current = { profile: profileData, role: data.user.role };
+          setProfile(profileData);
           setUserRole(data.user.role);
           setActiveTabForRole(data.user.role);
-          setSessionToken(null);
-          return;
         }
       } catch (e) {
         console.error('Error al restaurar sesión por cookie:', e);
       }
-
-      // Fallback: token Bearer guardado previamente en localStorage.
-      const token = getSessionToken();
-      if (!token) return;
-
-      try {
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const profile: StudentProfile = { name: data.user.name, email: data.user.email };
-          restoredSessionRef.current = { profile, role: data.user.role };
-          setProfile(profile);
-          setUserRole(data.user.role);
-          setActiveTabForRole(data.user.role);
-          setSessionToken(token);
-        } else {
-          clearSessionToken();
-          setSessionToken(null);
-        }
-      } catch (e) {
-        console.error('Error al restaurar sesión:', e);
-        clearSessionToken();
-        setSessionToken(null);
-      }
     })();
+  }, []);
+
+  // Interceptor global 401/403 para cerrar sesión automáticamente
+  useEffect(() => {
+    const unsubscribe = onUnauthorized(() => {
+      handleLogout();
+    });
+    return () => unsubscribe();
   }, []);
 
   const [allowedCourseIds, setAllowedCourseIds] = useState<string[]>([]);
@@ -151,21 +120,15 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        // Obtenemos los cursos permitidos para el usuario actual (2 o todos)
-        const headers: Record<string, string> = {};
-        const token = getSessionToken();
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const res = await fetch('/api/courses', { headers, credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
+        const { data, response: res } = await api.get<any[]>('/courses');
+        if (res.ok && Array.isArray(data)) {
           setAllowedCourseIds(data.map((c: any) => c.id));
         }
       } catch (e) {
         console.error('Error fetching courses:', e);
       }
     })();
-  }, [userRole, sessionToken]);
+  }, [userRole]);
 
   useEffect(() => {
     localStorage.setItem('quiroz_theme', theme);
@@ -187,9 +150,6 @@ export default function App() {
   };
 
   const handleSelectCourse = (course: Course) => {
-    // NUEVO MODELO DE NEGOCIO: los 8 cursos son gratuitos. Sin gating de pago
-    // ni bloqueo institucional en la UI. El único acceso restringido es el de
-    // /teacher/* (validado SIEMPRE en el backend con la suscripción activa).
     const prog = getCourseProgress(course.id);
     setSelectedCourse(course);
     setCurrentProgress(prog);
@@ -215,8 +175,7 @@ export default function App() {
     setCertificates(getAllCertificates());
   };
 
-  const handleOpenLogin = (defaultRole: UserRole = 'USUARIO') => {
-    setInitialModalRole(defaultRole);
+  const handleOpenLogin = () => {
     setIsRegisterModalOpen(false);
     setIsLoginModalOpen(true);
   };
@@ -236,27 +195,16 @@ export default function App() {
     setIsLoginModalOpen(true);
   };
 
-  const handleLoginSuccess = async (userProfile: StudentProfile, role: UserRole, token?: string) => {
+  const handleLoginSuccess = async (userProfile: StudentProfile, role: UserRole) => {
     setProfile(userProfile);
     saveStudentProfile(userProfile);
     setUserRole(role);
-
-    // Fase C3 — Se prefiere la cookie HttpOnly emitida por el backend sobre el
-    // token en localStorage (menos superficie de ataque XSS). El token en
-    // memoria solo se mantiene como respaldo retrocompatible para peticiones
-    // Bearer; ya no se persiste.
-    // El docente SÍ persiste su token en localStorage porque sus endpoints
-    // (/teacher/*) validan la suscripción activa en el backend (authHeaders).
-    setSessionToken(token ?? null);
-    if (token) saveSessionToken(token);
-    else clearSessionToken();
 
     restoredSessionRef.current = { profile: userProfile, role };
     setIsLoginModalOpen(false);
     setIsRegisterModalOpen(false);
 
     if (role === 'USUARIO') {
-      // Todos los cursos son gratuitos: no hay asignación ni "acceso completo".
       setActiveTab('catalog');
     } else {
       setActiveTab('admin');
@@ -266,20 +214,16 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    // Fase C3 — Cierra la sesión en el servidor (invalida el token y borra la
-    // cookie HttpOnly) usando credentials para enviar la cookie; Bearer opcional.
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
-      });
+      await api.post('/auth/logout');
     } catch (e) {
       console.error('Error al cerrar sesión en el servidor:', e);
     }
-    clearSessionToken();
-    setSessionToken(null);
+    clearStudentProfile();
     restoredSessionRef.current = null;
+    setProfile(defaultProfile);
+    setUserRole('USUARIO');
+    setActiveTab('catalog');
     setFlowStage('landing');
     setSelectedCourse(null);
   };
@@ -332,6 +276,10 @@ export default function App() {
             if (course) {
               if (allowedCourseIds.includes(course.id) || allowedCourseIds.length === 0) {
                 // Visitante entra al curso de muestra
+                if (!restoredSessionRef.current) {
+                  setProfile(defaultProfile);
+                  setUserRole('USUARIO');
+                }
                 setSelectedCourse(course);
                 setCurrentProgress(getCourseProgress(course.id));
                 setViewingReport(false);
@@ -339,10 +287,10 @@ export default function App() {
                 setFlowStage('app');
               } else {
                 alert('Inicia sesión para ver todos los cursos gratuitos');
-                handleOpenLogin('USUARIO');
+                handleOpenLogin();
               }
             } else {
-              handleOpenLogin('USUARIO');
+              handleOpenLogin();
             }
           }}
           theme={theme}
@@ -354,7 +302,6 @@ export default function App() {
           onClose={() => setIsLoginModalOpen(false)}
           onLoginSuccess={handleLoginSuccess}
           onSwitchToRegister={handleSwitchToRegister}
-          initialRole={initialModalRole}
           theme={theme}
         />
 
@@ -408,7 +355,7 @@ export default function App() {
                   handleSelectCourse(course);
                 } else {
                   alert('Inicia sesión para ver todos los cursos gratuitos');
-                  handleOpenLogin('USUARIO');
+                  handleOpenLogin();
                 }
               }}
               onViewReport={handleViewReport}
@@ -426,7 +373,6 @@ export default function App() {
                 profile={profile}
                 onBack={() => setViewingReport(false)}
                 onIssueCertificate={handleIssueCertificate}
-                sessionToken={sessionToken}
               />
             ) : (
               <CourseView
@@ -436,7 +382,6 @@ export default function App() {
                 onBack={() => setActiveTab('catalog')}
                 onViewReport={() => setViewingReport(true)}
                 theme={theme}
-                sessionToken={sessionToken}
               />
             )
           )}

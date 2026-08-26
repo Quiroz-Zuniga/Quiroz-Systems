@@ -24,7 +24,7 @@ describe('Certificates e2e', () => {
     await jsonFetch(baseUrl, '/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({
-        role: 'STUDENT',
+        role: 'USUARIO',
         name: 'SDD Cert',
         email: 'cert@test.com',
         password: 'Secret123!',
@@ -32,7 +32,7 @@ describe('Certificates e2e', () => {
     });
     const login = await jsonFetch(baseUrl, '/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'cert@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'cert@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
     token = login.data.token;
 
@@ -96,7 +96,7 @@ describe('Certificates e2e', () => {
     await jsonFetch(baseUrl, '/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({
-        role: 'STUDENT',
+        role: 'USUARIO',
         name: 'Sin Progreso',
         email: 'noprogress@test.com',
         password: 'Secret123!',
@@ -104,7 +104,7 @@ describe('Certificates e2e', () => {
     });
     const login = await jsonFetch(baseUrl, '/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'noprogress@test.com', password: 'Secret123!', role: 'STUDENT' }),
+      body: JSON.stringify({ email: 'noprogress@test.com', password: 'Secret123!', role: 'USUARIO' }),
     });
     const { status } = await jsonFetch(baseUrl, '/api/certificates/issue', {
       method: 'POST',

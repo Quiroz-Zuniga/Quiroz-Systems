@@ -15,6 +15,7 @@ import { authRouter } from './routes/auth';
 import { coursesRouter } from './routes/courses';
 import { institutionsRouter } from './routes/institutions';
 import { monetizationRouter } from './routes/monetization';
+import { subscriptionsRouter, webhooksRouter } from './routes/subscriptions';
 import { authRequired } from './middleware/auth';
 import { prisma } from './db';
 
@@ -74,6 +75,7 @@ export function buildApp(): express.Express {
         if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
         return callback(null, false);
       },
+      credentials: true,
     })
   );
 
@@ -85,7 +87,20 @@ export function buildApp(): express.Express {
     message: { error: 'Demasiadas solicitudes. Intenta de nuevo más tarde.' },
   });
 
+  const authLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 15, // 15 intentos/min por IP en auth
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { error: 'Demasiados intentos de autenticación. Intenta de nuevo en 1 minuto.' },
+    skip: () => process.env.NODE_ENV === 'test',
+  });
+
   app.use(express.json({ limit: '2mb' }));
+
+  // Rate limit dedicado para endpoints críticos de autenticación
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/register', authLimiter);
 
   // Fase A1 — Auth MW obligatoria.
   // Protege TODAS las rutas /api/* salvo la lista pública explícita
@@ -96,9 +111,11 @@ export function buildApp(): express.Express {
     '/auth/login',
     '/auth/me',
     '/auth/logout',
+    '/courses',
     '/certificates/verify',
     '/monetization-config',
     '/health',
+    '/webhooks/paypal',
   ];
 
   app.use('/api', (req, res, next) => {
@@ -124,6 +141,8 @@ export function buildApp(): express.Express {
   app.use('/api', authRouter);
   app.use('/api', monetizationRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api', subscriptionsRouter);
+  app.use('/api', webhooksRouter);
 
   // Fase C5 — En producción sirve el frontend compilado (dist/public) desde
   // Express. En tests no existe, así que se omite.

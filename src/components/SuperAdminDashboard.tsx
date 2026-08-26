@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, Award, BookOpen, ShieldCheck, Search, RefreshCw, Building2, UserCheck, CheckCircle2, Clock, Plus, X, Ban, Save, GraduationCap, Coffee, Heart, CalendarClock, Zap } from 'lucide-react';
 import logoQuiroz from '../img/logo_quiroz_systems.png';
-import { authHeaders } from '../lib/storage';
+import { api } from '../lib/apiClient';
 
 interface OverviewStats {
   totalStudents: number;
@@ -31,8 +31,6 @@ interface InstitutionRecord {
   _count: { students: number; instructors: number };
 }
 
-
-
 interface MonetizationConfig {
   kofiUrl: string | null;
   paypalUrl: string | null;
@@ -51,11 +49,25 @@ interface StudentRecord {
   createdAt: string;
 }
 
+interface TransactionRecord {
+  id: string;
+  subscriptionId: string;
+  institutionName: string;
+  teacherName: string;
+  plan: string;
+  monto: number;
+  moneda: string;
+  estado: string;
+  referenciaPaypal: string | null;
+  fecha: string;
+}
+
 export const SuperAdminDashboard: React.FC = () => {
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [instructors, setInstructors] = useState<InstructorRecord[]>([]);
   const [institutions, setInstitutions] = useState<InstitutionRecord[]>([]);
   const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
 
   const [monetization, setMonetization] = useState<MonetizationConfig>({
     kofiUrl: null,
@@ -67,6 +79,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [instructorSearch, setInstructorSearch] = useState('');
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
+  const [transactionSearch, setTransactionSearch] = useState('');
 
   const [actionFeedback, setActionFeedback] = useState('');
 
@@ -75,69 +88,97 @@ export const SuperAdminDashboard: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newInstName, setNewInstName] = useState('');
-  const [adding, setAdding] = useState(false);
   const [addFeedback, setAddFeedback] = useState('');
+  const [adding, setAdding] = useState(false);
 
+  // Edit subscription modal
+  const [editSubModal, setEditSubModal] = useState<{
+    isOpen: boolean;
+    institutionId: string;
+    institutionName: string;
+    currentPlan: string;
+    currentStatus: string;
+    maxAlumnos: number;
+  }>({
+    isOpen: false,
+    institutionId: '',
+    institutionName: '',
+    currentPlan: 'ESTANDAR',
+    currentStatus: 'activa',
+    maxAlumnos: 50,
+  });
 
-
-  const fetchAll = async () => {
+  const fetchAll = async (signal?: AbortSignal) => {
     setLoading(true);
     setFetchError('');
     try {
-      const [resO, resI, resS, resSt] = await Promise.all([
-        fetch('/api/admin/overview', { headers: authHeaders() }),
-        fetch('/api/admin/instructors', { headers: authHeaders() }),
-        fetch('/api/admin/institutions', { headers: authHeaders() }),
-        fetch('/api/admin/students', { headers: authHeaders() }),
+      const [resO, resI, resS, resSt, resTx] = await Promise.all([
+        api.get<OverviewStats>('/admin/overview', { signal }),
+        api.get<InstructorRecord[]>('/admin/instructors', { signal }),
+        api.get<{ institutions: InstitutionRecord[] }>('/admin/institutions', { signal }),
+        api.get<{ students: StudentRecord[] }>('/admin/students', { signal }),
+        api.get<{ transactions: TransactionRecord[] }>('/admin/transactions', { signal }),
       ]);
-      if (resO.ok) setOverview(await resO.json());
-      if (resI.ok) setInstructors(await resI.json());
-      if (resS.ok) setInstitutions((await resS.json()).institutions);
-      if (resSt.ok) setStudents((await resSt.json()).students);
-      if (!resO.ok || !resI.ok || !resS.ok || !resSt.ok) {
-        if (resO.status === 401 || resO.status === 403) {
+      if (resO.response.ok && resO.data) setOverview(resO.data);
+      if (resI.response.ok && resI.data) setInstructors(resI.data);
+      if (resS.response.ok && resS.data?.institutions) setInstitutions(resS.data.institutions);
+      if (resSt.response.ok && resSt.data?.students) setStudents(resSt.data.students);
+      if (resTx.response.ok && resTx.data?.transactions) setTransactions(resTx.data.transactions);
+
+      if (!resO.response.ok || !resI.response.ok || !resS.response.ok || !resSt.response.ok) {
+        if (resO.response.status === 401 || resO.response.status === 403) {
           setFetchError('Sesión expirada o no tienes permisos. Por favor, inicia sesión nuevamente.');
         } else {
-          setFetchError('El servidor respondió con error interno. Verifica los logs del backend.');
+          setFetchError('El servidor respondió con error.');
         }
       }
-    } catch (e) {
-      console.error(e);
-      setFetchError('No se pudo conectar con el servidor. Verifica que el backend (puerto 4000) esté corriendo.');
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        console.error(e);
+        setFetchError('No se pudo conectar con el servidor.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchAll(controller.signal);
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
-  const fetchMonetization = async () => {
+  const fetchMonetization = async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/monetization-config', { headers: authHeaders() });
-      if (res.ok) {
-        const data = await res.json();
+      const { data, response: res } = await api.get<any>('/monetization-config', { signal });
+      if (res.ok && data) {
         setMonetization({
           kofiUrl: data.kofiUrl || null,
           paypalUrl: data.paypalUrl || null,
           subscriptionPriceDisplay: data.subscriptionPriceDisplay || '$9.99 USD/mes',
         });
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        console.error(e);
+      }
     }
   };
 
-  useEffect(() => { fetchMonetization(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchMonetization(controller.signal);
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const handleInstructorAction = async (instructorId: string, status: 'APPROVED' | 'REJECTED') => {
     setActionFeedback('');
     try {
-      const res = await fetch('/api/admin/approve-instructor', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ instructorId, status }),
-      });
-      const data = await res.json();
+      const { data, response: res } = await api.post('/admin/approve-instructor', { instructorId, status });
       if (res.ok) {
         setActionFeedback(data.message);
         await fetchAll();
@@ -151,12 +192,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const handleInstitutionAction = async (institutionId: string, status: 'APPROVED' | 'REJECTED') => {
     setActionFeedback('');
     try {
-      const res = await fetch('/api/admin/update-institution', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ institutionId, status }),
-      });
-      const data = await res.json();
+      const { data, response: res } = await api.post('/admin/update-institution', { institutionId, status });
       if (res.ok) {
         setActionFeedback(data.message);
         await fetchAll();
@@ -173,18 +209,13 @@ export const SuperAdminDashboard: React.FC = () => {
     setAdding(true);
     setAddFeedback('');
     try {
-      const res = await fetch('/api/admin/add-instructor', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ name: newName, email: newEmail, institutionName: newInstName }),
-      });
-      const data = await res.json();
+      const { data, response: res } = await api.post('/admin/add-instructor', { name: newName, email: newEmail, institutionName: newInstName });
       if (res.ok) {
         setAddFeedback(`Docente ${data.instructor.name} agregado y habilitado.`);
         await fetchAll();
         setTimeout(() => { setIsAddOpen(false); setNewName(''); setNewEmail(''); setNewInstName(''); setAddFeedback(''); }, 1500);
       } else {
-        setAddFeedback(`Error: ${data.error}`);
+        setAddFeedback(`Error: ${data?.error || 'Error al agregar docente'}`);
       }
     } catch (err: any) {
       setAddFeedback(`Error de red: ${err.message}`);
@@ -193,21 +224,38 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-
   const handleSaveMonetization = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/monetization-config', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify(monetization),
-      });
-      const data = await res.json();
+      const { data, response: res } = await api.post('/admin/monetization-config', monetization);
       if (res.ok) {
-        setActionFeedback(data.message);
+        setActionFeedback(data.message || 'Configuración guardada exitosamente.');
         setTimeout(() => setActionFeedback(''), 3000);
       } else {
-        setActionFeedback(`Error: ${data.error || 'No se pudo guardar la configuración.'}`);
+        setActionFeedback(`Error: ${data?.error || 'No se pudo guardar la configuración.'}`);
+      }
+    } catch (e: any) {
+      setActionFeedback(`Error: ${e.message}`);
+    }
+  };
+
+  const handleUpdateSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSubModal.institutionId) return;
+    try {
+      const { data, response: res } = await api.post('/admin/update-subscription', {
+        institutionId: editSubModal.institutionId,
+        estado: editSubModal.currentStatus,
+        plan: editSubModal.currentPlan,
+        maxAlumnos: editSubModal.maxAlumnos,
+      });
+      if (res.ok) {
+        setActionFeedback(data?.message || 'Suscripción institucional actualizada correctamente.');
+        setEditSubModal((prev) => ({ ...prev, isOpen: false }));
+        await fetchAll();
+        setTimeout(() => setActionFeedback(''), 3000);
+      } else {
+        setActionFeedback(`Error: ${data?.error || 'No se pudo actualizar la suscripción.'}`);
       }
     } catch (e: any) {
       setActionFeedback(`Error: ${e.message}`);
@@ -222,9 +270,8 @@ export const SuperAdminDashboard: React.FC = () => {
     (i) => i.name.toLowerCase().includes(institutionSearch.toLowerCase()) || i.code.toLowerCase().includes(institutionSearch.toLowerCase())
   );
 
-
   const filteredStudents = students
-    .filter((s) => s.email !== 'superadmin@quirozsystems.com')
+    .filter((s) => s.email !== 'superadmin@quirozsystems.com' && s.email !== 'quirozsystems@gmail.com')
     .filter(
       (s) =>
         s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
@@ -232,11 +279,27 @@ export const SuperAdminDashboard: React.FC = () => {
         s.institutionName.toLowerCase().includes(studentSearch.toLowerCase())
     );
 
+  const filteredTransactions = transactions.filter(
+    (t) =>
+      t.institutionName.toLowerCase().includes(transactionSearch.toLowerCase()) ||
+      t.teacherName.toLowerCase().includes(transactionSearch.toLowerCase()) ||
+      (t.referenciaPaypal && t.referenciaPaypal.toLowerCase().includes(transactionSearch.toLowerCase())) ||
+      t.plan.toLowerCase().includes(transactionSearch.toLowerCase())
+  );
+
+  const totalRevenueUSD = transactions
+    .filter((t) => t.estado === 'completado')
+    .reduce((sum, t) => sum + t.monto, 0);
+
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
       PENDING: 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
       APPROVED: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
       REJECTED: 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+      activa: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      pendiente_pago: 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      vencida: 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+      cancelada: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700',
     };
     return map[status] || map['PENDING'];
   };
@@ -369,12 +432,12 @@ export const SuperAdminDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Instituciones Management */}
+      {/* Instituciones Management & Suscripciones */}
       <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333333] rounded-xl p-6 gcp-card-shadow space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-2 border-b border-gray-100 dark:border-[#333333]">
           <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
             <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <span>Instituciones Educativas ({filteredInstitutions.length})</span>
+            <span>Instituciones Educativas y Planes ({filteredInstitutions.length})</span>
           </h2>
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
@@ -393,14 +456,15 @@ export const SuperAdminDashboard: React.FC = () => {
                 <tr>
                   <th className="p-3">Institución</th>
                   <th className="p-3">Código</th>
-                  <th className="p-3">Docentes</th>
+                  <th className="p-3">Alumnos</th>
+                  <th className="p-3">Plan Activo</th>
                   <th className="p-3">Estado</th>
                   <th className="p-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-[#333333] text-gray-800 dark:text-gray-200">
-                {filteredInstitutions.map((inst) => {
-                  const docentes = inst._count.instructors;
+                {filteredInstitutions.map((inst: any) => {
+                  const alumnos = inst._count?.students || 0;
                   return (
                     <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-[#262626] transition-colors">
                       <td className="p-3">
@@ -408,21 +472,42 @@ export const SuperAdminDashboard: React.FC = () => {
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">{inst.adminEmail}</p>
                       </td>
                       <td className="p-3 font-mono text-[11px] text-gray-500 dark:text-gray-400">{inst.code}</td>
-                      <td className="p-3 font-mono font-bold text-[#1a73e8]">{docentes}</td>
+                      <td className="p-3 font-mono font-bold text-[#1a73e8]">{alumnos} / {inst.maxAlumnos || 50}</td>
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                          {inst.plan || 'ESTANDAR'}
+                        </span>
+                      </td>
                       <td className="p-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${statusBadge(inst.status)}`}>
                           {statusLabel(inst.status)}
                         </span>
                       </td>
                       <td className="p-3 text-right space-x-2">
+                        <button
+                          onClick={() =>
+                            setEditSubModal({
+                              isOpen: true,
+                              institutionId: inst.id,
+                              institutionName: inst.name,
+                              currentPlan: inst.plan || 'ESTANDAR',
+                              currentStatus: inst.status === 'APPROVED' ? 'activa' : 'pendiente_pago',
+                              maxAlumnos: inst.maxAlumnos || 50,
+                            })
+                          }
+                          className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-3 py-1.5 rounded-md text-xs transition-all inline-flex items-center space-x-1 cursor-pointer"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Gestionar Plan</span>
+                        </button>
                         {inst.status !== 'APPROVED' && (
-                          <button onClick={() => handleInstitutionAction(inst.id, 'APPROVED')} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-md text-xs transition-all inline-flex items-center space-x-1">
+                          <button onClick={() => handleInstitutionAction(inst.id, 'APPROVED')} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-md text-xs transition-all inline-flex items-center space-x-1 cursor-pointer">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Aprobar</span>
                           </button>
                         )}
                         {inst.status !== 'REJECTED' && (
-                          <button onClick={() => handleInstitutionAction(inst.id, 'REJECTED')} className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-md text-xs transition-all inline-flex items-center space-x-1">
+                          <button onClick={() => handleInstitutionAction(inst.id, 'REJECTED')} className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-md text-xs transition-all inline-flex items-center space-x-1 cursor-pointer">
                             <Ban className="w-3.5 h-3.5" />
                             <span>Bloquear</span>
                           </button>
@@ -431,6 +516,95 @@ export const SuperAdminDashboard: React.FC = () => {
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* MONITOREO DE PAGOS Y TRANSACCIONES INSTITUCIONALES */}
+      <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333333] rounded-xl p-6 gcp-card-shadow space-y-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-2 border-b border-gray-100 dark:border-[#333333]">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>Monitoreo de Pagos y Transacciones</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-mono font-bold">
+                  Total: ${totalRevenueUSD.toFixed(2)} USD
+                </span>
+              </h2>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Auditoría en tiempo real de los pagos de suscripciones de instituciones educativas.
+              </p>
+            </div>
+          </div>
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={transactionSearch}
+              onChange={(e) => setTransactionSearch(e.target.value)}
+              placeholder="Buscar por institución, docente, ref..."
+              className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-[#333333] rounded-lg pl-9 pr-3 py-1.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#1a73e8]"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="py-8 text-center text-xs text-[#1a73e8] font-mono font-bold animate-pulse">Cargando transacciones de pago...</div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="py-8 text-center text-xs text-gray-500 dark:text-gray-400 font-mono">No hay transacciones registradas aún.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 dark:bg-[#262626] text-gray-700 dark:text-gray-300 font-semibold border-b border-gray-200 dark:border-[#333333]">
+                <tr>
+                  <th className="p-3">ID / Fecha</th>
+                  <th className="p-3">Institución / Docente</th>
+                  <th className="p-3">Plan</th>
+                  <th className="p-3">Monto</th>
+                  <th className="p-3">Referencia PayPal</th>
+                  <th className="p-3">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-[#333333] text-gray-800 dark:text-gray-200">
+                {filteredTransactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-[#262626] transition-colors">
+                    <td className="p-3 font-mono">
+                      <p className="font-bold text-[#1a73e8]">{tx.id}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{new Date(tx.fecha).toLocaleDateString('es-ES')}</p>
+                    </td>
+                    <td className="p-3">
+                      <p className="font-bold text-gray-900 dark:text-white">{tx.institutionName}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{tx.teacherName}</p>
+                    </td>
+                    <td className="p-3 font-mono">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                        {tx.plan}
+                      </span>
+                    </td>
+                    <td className="p-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                      ${tx.monto.toFixed(2)} {tx.moneda}
+                    </td>
+                    <td className="p-3 font-mono text-[11px] text-gray-600 dark:text-gray-400">
+                      {tx.referenciaPaypal || 'DIRECT-CHECKOUT'}
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                        tx.estado === 'completado'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          : tx.estado === 'fallido'
+                          ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                          : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                      }`}>
+                        {tx.estado}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -507,6 +681,81 @@ export const SuperAdminDashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal Editar Suscripción Institucional */}
+      {editSubModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#181818] border border-gray-300 dark:border-[#333333] rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4 text-gray-800 dark:text-[#ededed]">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-[#333333]">
+              <div className="flex items-center space-x-2.5">
+                <Zap className="w-5 h-5 text-[#1a73e8]" />
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">Gestionar Suscripción Institucional</h3>
+              </div>
+              <button onClick={() => setEditSubModal((prev) => ({ ...prev, isOpen: false }))} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubscription} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Institución</label>
+                <input type="text" disabled value={editSubModal.institutionName} className="w-full bg-gray-100 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Plan</label>
+                  <select
+                    value={editSubModal.currentPlan}
+                    onChange={(e) => setEditSubModal({ ...editSubModal, currentPlan: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]"
+                  >
+                    <option value="BASICO">Básico (25 alumnos)</option>
+                    <option value="ESTANDAR">Estándar (50 alumnos)</option>
+                    <option value="PREMIUM">Premium (100 alumnos)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Estado de Pago</label>
+                  <select
+                    value={editSubModal.currentStatus}
+                    onChange={(e) => setEditSubModal({ ...editSubModal, currentStatus: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]"
+                  >
+                    <option value="activa">Activa (Pagado)</option>
+                    <option value="pendiente_pago">Pendiente de Pago</option>
+                    <option value="vencida">Vencida</option>
+                    <option value="cancelada">Cancelada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Capacidad Máxima de Alumnos</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={editSubModal.maxAlumnos}
+                  onChange={(e) => setEditSubModal({ ...editSubModal, maxAlumnos: parseInt(e.target.value) || 50 })}
+                  className="w-full bg-gray-50 dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#333333] rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#1a73e8]"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-gray-100 dark:border-[#333333]">
+                <button type="button" onClick={() => setEditSubModal((prev) => ({ ...prev, isOpen: false }))} className="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-lg cursor-pointer">
+                  Cancelar
+                </button>
+                <button type="submit" className="px-4 py-2 text-xs font-bold bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-lg shadow-sm flex items-center space-x-1.5 cursor-pointer">
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Guardar Cambios</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
 
       {/* Monetización: Donaciones Ko-fi/PayPal + precio de suscripción */}

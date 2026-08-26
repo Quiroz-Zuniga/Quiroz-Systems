@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { BookOpen, Award, CheckCircle2, ShieldCheck, User, Search, Bell, Settings, ChevronDown, Code2, X, Play, Trash2, Check, Sun, Moon, LogOut, Coffee } from 'lucide-react';
-import { StudentProfile } from '../types';
+import { StudentProfile, UserRole } from '../types';
 import { CodeEditor } from './CodeEditor';
-import { authHeaders } from '../lib/storage';
+import { api } from '../lib/apiClient';
 import logoQuiroz from '../img/logo_quiroz_systems.png';
 
 interface NavbarProps {
@@ -15,7 +15,7 @@ interface NavbarProps {
   currentCourseTitle?: string;
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
-  userRole: 'STUDENT' | 'INSTRUCTOR' | 'SUPER_ADMIN';
+  userRole: UserRole;
   onLogout: () => void;
 }
 
@@ -83,18 +83,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsExecutingShell(true);
     setShellOutput('Ejecutando tu código...');
     try {
-      const res = await fetch('/api/execute', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          language: shellLang,
-          code: shellCode,
-          testCases: [{ id: '1', output: '' }],
-        }),
+      const { data, response: res } = await api.post<any>('/execute', {
+        language: shellLang,
+        code: shellCode,
+        testCases: [{ id: '1', output: '' }],
       });
-      const data = await res.json();
-      const firstResult = data.results && data.results[0] ? data.results[0].actualOutput : '';
-      setShellOutput(firstResult || data.logs || 'Ejecución finalizada.');
+      const firstResult = data?.results && data.results[0] ? data.results[0].actualOutput : '';
+      setShellOutput(firstResult || data?.logs || 'Ejecución finalizada.');
     } catch (e: any) {
       setShellOutput('Error de ejecución: ' + e.message);
     } finally {
@@ -114,10 +109,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const isDark = theme === 'dark';
-  const isAdminRole = userRole === 'INSTRUCTOR' || userRole === 'SUPER_ADMIN';
-  const isTeacherRole = false; // Left as false to avoid breaking conditions
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const isTeacher = userRole === 'INSTITUCION' || userRole === 'PENDIENTE_INSTITUCION';
+  const hasAdminPanel = isSuperAdmin || isTeacher;
+
   const goHome = () => {
-    if (isAdminRole) setActiveTab('admin');
+    if (hasAdminPanel) setActiveTab('admin');
     else setActiveTab('catalog');
   };
 
@@ -152,57 +149,53 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className={`h-5 w-[1px] hidden md:block ${isDark ? 'bg-[#333333]' : 'bg-gray-200'}`} />
 
-          {/* Active Course Selector Chip (students only) */}
-          {!isAdminRole && !isTeacherRole && (
-            <div
-              onClick={() => setActiveTab('catalog')}
-              className={`hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors border ${
-                isDark
-                  ? 'bg-[#262626] hover:bg-[#333333] text-gray-200 border-[#333333]'
-                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
-              }`}
-            >
-              <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Curso:</span>
-              <span className="font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">
-                {currentCourseTitle || 'Catálogo General'}
-              </span>
-              <ChevronDown className={`w-3.5 h-3.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-            </div>
-          )}
+          {/* Active Course Selector Chip */}
+          <div
+            onClick={() => setActiveTab('catalog')}
+            className={`hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors border ${
+              isDark
+                ? 'bg-[#262626] hover:bg-[#333333] text-gray-200 border-[#333333]'
+                : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
+            }`}
+          >
+            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Curso:</span>
+            <span className="font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">
+              {currentCourseTitle || 'Catálogo General'}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+          </div>
         </div>
 
-        {/* Center: Search Bar (students only) */}
-        {!isAdminRole && !isTeacherRole && (
-          <div className="flex-1 max-w-xl hidden lg:block">
-            <div className="relative">
-              <Search className={`w-4 h-4 absolute left-3 top-2.5 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activeTab !== 'catalog' && activeTab !== 'course') {
-                    setActiveTab('catalog');
-                  }
-                }}
-                placeholder="Buscar cursos por lenguaje (C++, Python, JS, SQL...), nivel o descripción..."
-                className={`w-full border rounded-lg pl-9 pr-8 py-1.5 text-xs focus:outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] transition-all ${
-                  isDark
-                    ? 'bg-[#0d0d0d] border-[#333333] text-white placeholder-gray-500'
-                    : 'bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400 focus:bg-white'
-                }`}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+        {/* Center: Search Bar */}
+        <div className="flex-1 max-w-xl hidden lg:block">
+          <div className="relative">
+            <Search className={`w-4 h-4 absolute left-3 top-2.5 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (activeTab !== 'catalog' && activeTab !== 'course') {
+                  setActiveTab('catalog');
+                }
+              }}
+              placeholder="Buscar cursos por lenguaje (C++, Python, JS, SQL...), nivel o descripción..."
+              className={`w-full border rounded-lg pl-9 pr-8 py-1.5 text-xs focus:outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] transition-all ${
+                isDark
+                  ? 'bg-[#0d0d0d] border-[#333333] text-white placeholder-gray-500'
+                  : 'bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400 focus:bg-white'
+              }`}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Right: Theme Toggle, Profile & Actions */}
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -210,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title={theme === 'dark' ? 'Cambiar a Tema Claro' : 'Cambiar a Modo Oscuro Preloader'}
-            className={`p-2 rounded-full transition-colors ${
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
               isDark ? 'text-gray-300 hover:bg-[#262626]' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -225,7 +218,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsShellOpen(true)}
             title="Abrir Consola de Ejecución"
-            className={`p-2 rounded-full transition-colors relative ${
+            className={`p-2 rounded-full transition-colors relative cursor-pointer ${
               isDark ? 'text-gray-300 hover:bg-[#262626]' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -236,7 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('quiroz:open-coffee'))}
             title="Invítanos un café (donación voluntaria)"
-            className={`px-3 py-2 rounded-full transition-colors flex items-center space-x-1.5 text-xs font-bold border ${
+            className={`px-3 py-2 rounded-full transition-colors flex items-center space-x-1.5 text-xs font-bold border cursor-pointer ${
               isDark
                 ? 'text-amber-400 hover:bg-amber-950/40 border-[#333333]'
                 : 'text-amber-600 hover:bg-amber-50 border-gray-200'
@@ -250,7 +243,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
             title="Notificaciones de la Plataforma"
-            className={`p-2 rounded-full transition-colors relative ${
+            className={`p-2 rounded-full transition-colors relative cursor-pointer ${
               isDark ? 'text-gray-300 hover:bg-[#262626]' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -264,7 +257,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsSettingsOpen(true)}
             title="Configuración de la Plataforma"
-            className={`p-2 rounded-full transition-colors ${
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
               isDark ? 'text-gray-300 hover:bg-[#262626]' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -276,7 +269,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Profile Button */}
           <button
             onClick={() => setIsEditProfileOpen(true)}
-            className={`flex items-center space-x-2 border px-2.5 py-1 rounded-full transition-colors text-left ${
+            className={`flex items-center space-x-2 border px-2.5 py-1 rounded-full transition-colors text-left cursor-pointer ${
               isDark ? 'bg-[#262626] hover:bg-[#333333] border-[#333333]' : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
             }`}
           >
@@ -284,11 +277,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               {profile.name.charAt(0).toUpperCase()}
             </div>
             <div className="hidden sm:block text-xs pr-1">
-              <p className="font-semibold text-gray-800 dark:text-white truncate max-w-[100px]">
+              <p className="font-semibold text-gray-800 dark:text-white truncate max-w-[120px]">
                 {profile.name}
               </p>
               <p className="text-[10px] text-[#1a73e8] font-medium font-mono uppercase">
-                {userRole === 'SUPER_ADMIN' ? 'Administrador' : userRole === 'INSTRUCTOR' ? 'Docente' : 'Estudiante'}
+                {userRole === 'SUPER_ADMIN'
+                  ? 'SuperAdmin'
+                  : isTeacher
+                  ? 'Docente'
+                  : profile.email
+                  ? 'Estudiante'
+                  : 'Invitado'}
               </p>
             </div>
           </button>
@@ -297,7 +296,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onLogout}
             title="Cerrar Sesión (Volver al Inicio)"
-            className={`p-2 rounded-full transition-colors ${
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
               isDark ? 'text-rose-400 hover:bg-rose-950/40' : 'text-rose-600 hover:bg-rose-50'
             }`}
           >
@@ -310,10 +309,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className={`px-4 sm:px-6 flex items-center space-x-1 overflow-x-auto text-xs font-medium ${
         isDark ? 'bg-[#181818]' : 'bg-gray-50/70'
       }`}>
-        {!isAdminRole && !isTeacherRole && (
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'catalog' || activeTab === 'course'
               ? 'border-[#1a73e8] text-[#1a73e8] font-semibold ' + (isDark ? 'bg-[#262626]' : 'bg-white')
               : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ' + (isDark ? 'hover:bg-[#262626]' : 'hover:bg-gray-100')
@@ -322,12 +320,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <BookOpen className="w-4 h-4" />
           <span>Catálogo de Cursos</span>
         </button>
-        )}
 
-        {!isAdminRole && !isTeacherRole && (
         <button
           onClick={() => setActiveTab('certificates')}
-          className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'certificates'
               ? 'border-[#1a73e8] text-[#1a73e8] font-semibold ' + (isDark ? 'bg-[#262626]' : 'bg-white')
               : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ' + (isDark ? 'hover:bg-[#262626]' : 'hover:bg-gray-100')
@@ -336,11 +332,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Award className="w-4 h-4" />
           <span>Certificados y Reportes</span>
         </button>
-        )}
 
         <button
           onClick={() => setActiveTab('verifier')}
-          className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'verifier'
               ? 'border-[#1a73e8] text-[#1a73e8] font-semibold ' + (isDark ? 'bg-[#262626]' : 'bg-white')
               : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ' + (isDark ? 'hover:bg-[#262626]' : 'hover:bg-gray-100')
@@ -350,20 +345,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>Verificador de Certificados</span>
         </button>
 
-
-
-        {isAdminRole && (
-        <button
-          onClick={() => setActiveTab('admin')}
-          className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'admin'
-              ? 'border-[#1a73e8] text-[#1a73e8] font-semibold ' + (isDark ? 'bg-[#262626]' : 'bg-white')
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ' + (isDark ? 'hover:bg-[#262626]' : 'hover:bg-gray-100')
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4 text-[#1a73e8]" />
-          <span>{userRole === 'SUPER_ADMIN' ? 'SuperAdmin Quiroz Systems' : 'Panel Docente'}</span>
-        </button>
+        {hasAdminPanel && (
+          <button
+            onClick={() => setActiveTab('admin')}
+            className={`flex items-center space-x-2 px-4 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'admin'
+                ? 'border-[#1a73e8] text-[#1a73e8] font-semibold ' + (isDark ? 'bg-[#262626]' : 'bg-white')
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ' + (isDark ? 'hover:bg-[#262626]' : 'hover:bg-gray-100')
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-[#1a73e8]" />
+            <span>{isSuperAdmin ? 'Panel SuperAdmin' : 'Panel Docente'}</span>
+          </button>
         )}
       </div>
 

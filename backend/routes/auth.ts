@@ -46,14 +46,33 @@ authRouter.post('/auth/register', validateBody(registerSchema), async (req: Requ
 
     const passwordHash = await hashPassword(password);
 
+    let finalRole = role;
+    if (role === 'INSTITUCION') {
+      finalRole = 'PENDIENTE_INSTITUCION';
+    }
+
     const user = await prisma.user.create({
       data: {
         name: String(name).trim(),
         email: emailNormalized,
         password: passwordHash,
-        role,
+        role: finalRole,
       },
     });
+
+    if (finalRole === 'PENDIENTE_INSTITUCION') {
+      const institutionTitle = req.body.institutionName
+        ? String(req.body.institutionName).trim()
+        : String(name).trim();
+
+      await prisma.institution.create({
+        data: {
+          id: user.id,
+          nombre: institutionTitle,
+          nombre_docente_responsable: String(name).trim(),
+        },
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -75,35 +94,17 @@ authRouter.post('/auth/login', validateBody(loginSchema), async (req: Request, r
     }
 
     const emailNormalized = String(email).trim().toLowerCase();
-    let user = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email: emailNormalized },
     });
 
-    if (emailNormalized === 'superadmin@quirozsystems.com') {
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            name: 'Quiroz Systems Admin',
-            email: 'superadmin@quirozsystems.com',
-            role: 'SUPER_ADMIN',
-            password: await hashPassword(password),
-          },
-        });
-      } else if (user.role !== 'SUPER_ADMIN') {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { role: 'SUPER_ADMIN' }
-        });
-      }
-    } else {
-      if (!user || !user.password) {
-        return res.status(401).json({ error: 'Credenciales incorrectas. Si no tienes cuenta, regístrate primero.' });
-      }
+    if (!user || !user.password) {
+      return res.status(401).json({ error: 'Credenciales incorrectas. Si no tienes cuenta, regístrate primero.' });
+    }
 
-      const valid = await verifyPassword(String(password), user.password);
-      if (!valid) {
-        return res.status(401).json({ error: 'Credenciales incorrectas. Revisa tu correo y contraseña.' });
-      }
+    const valid = await verifyPassword(String(password), user.password);
+    if (!valid) {
+      return res.status(401).json({ error: 'Credenciales incorrectas. Revisa tu correo y contraseña.' });
     }
 
     await prisma.session.deleteMany({ where: { userId: user!.id } });
@@ -155,7 +156,8 @@ authRouter.post('/auth/logout', async (req: Request, res: Response) => {
     if (token) {
       await prisma.session.deleteMany({ where: { token } });
     }
-    res.clearCookie(sessionCookieName());
+    const { maxAge, ...clearOptions } = sessionCookieOptions();
+    res.clearCookie(sessionCookieName(), clearOptions);
     return res.json({ success: true });
   } catch (error: any) {
     console.error('Error al cerrar sesión:', error);

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Course, CourseProgress, Certificate, StudentProfile, LessonAttempt } from '../types';
 import { downloadCertificatePdf } from '../lib/pdfGenerator';
+import { api } from '../lib/apiClient';
 import { Award, Download, CheckCircle2, Clock, Zap, Target, ArrowLeft, BarChart3, GitPullRequest } from 'lucide-react';
 
 interface GradeReportViewProps {
@@ -19,36 +20,28 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
   profile,
   onBack,
   onIssueCertificate,
-  sessionToken,
 }) => {
   const attemptsList: LessonAttempt[] = Object.values(progress.attempts || {});
   const completedAttempts: LessonAttempt[] = attemptsList.filter((a) => a.passed);
 
   // B1 — Nota final calculada SIEMPRE por el backend (rúbrica 70/20/10).
-  // El cliente ya no suma puntajes: consulta /api/progress/:courseId que
-  // recalcula la nota a partir de los intentos persistidos en el servidor.
   const [finalGradePercent, setFinalGradePercent] = useState<number>(
     typeof progress.finalGradePercent === 'number' ? progress.finalGradePercent : 0
   );
 
   useEffect(() => {
     (async () => {
-      if (!sessionToken || progress.courseId === undefined) return;
+      if (progress.courseId === undefined) return;
       try {
-        const res = await fetch(`/api/progress/${encodeURIComponent(String(progress.courseId))}`, {
-          headers: { Authorization: `Bearer ${sessionToken}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (typeof data.finalGradePercent === 'number') {
-            setFinalGradePercent(data.finalGradePercent);
-          }
+        const { data, response: res } = await api.get<any>(`/progress/${encodeURIComponent(String(progress.courseId))}`);
+        if (res.ok && typeof data?.finalGradePercent === 'number') {
+          setFinalGradePercent(data.finalGradePercent);
         }
       } catch (e) {
         console.error('Error al consultar la nota final en el servidor:', e);
       }
     })();
-  }, [sessionToken, progress.courseId]);
+  }, [progress.courseId]);
 
   const totalTimeSeconds = completedAttempts.reduce((acc, curr) => acc + curr.timeSpentSeconds, 0);
 
@@ -87,27 +80,17 @@ export const GradeReportView: React.FC<GradeReportViewProps> = ({
 
   const handleDownloadPdf = async () => {
     try {
-      // Emisión segura: el backend valida el 100% y genera el UUID. El cliente
-      // ya NO envía ni studentName ni finalGradePercent ni el uuid (Zero Trust).
-      const res = await fetch('/api/certificates/issue', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
-        },
-        body: JSON.stringify({
-          courseId: course.id,
-          courseTitle: course.title,
-          studyHours: course.estimatedHours,
-        }),
+      // Emisión segura: el backend valida el 100% y genera el UUID.
+      const { data, response: res } = await api.post<any>('/certificates/issue', {
+        courseId: course.id,
+        courseTitle: course.title,
+        studyHours: course.estimatedHours,
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Error HTTP ${res.status}`);
+        throw new Error(data?.error || `Error HTTP ${res.status}`);
       }
 
-      const data = await res.json();
       onIssueCertificate(data.certificate);
       downloadCertificatePdf(data.certificate);
     } catch (e: any) {

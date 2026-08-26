@@ -136,7 +136,7 @@ export interface StudentProfile {
 
 // --- Autenticación ----------------------------------------------------------
 
-export type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'SUPER_ADMIN' | 'TEACHER';
+export type UserRole = 'USUARIO' | 'INSTITUCION' | 'PENDIENTE_INSTITUCION' | 'SUPER_ADMIN';
 
 export interface AuthUser {
   id: string;
@@ -147,7 +147,7 @@ export interface AuthUser {
 }
 
 export interface RegisterRequest {
-  role: 'STUDENT' | 'INSTRUCTOR';
+  role: 'USUARIO' | 'INSTITUCION';
   name: string;
   email: string;
   password: string;
@@ -157,7 +157,7 @@ export interface RegisterRequest {
 export interface LoginRequest {
   email: string;
   password: string;
-  role?: 'STUDENT' | 'INSTRUCTOR';
+  role?: UserRole;
 }
 
 // --- Docentes / Instituciones (suscripción mensual) -------------------------

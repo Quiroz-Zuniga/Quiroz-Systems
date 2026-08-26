@@ -8,7 +8,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: 'USUARIO' | 'INSTITUCION' | 'SUPER_ADMIN';
+  role: 'USUARIO' | 'PENDIENTE_INSTITUCION' | 'INSTITUCION' | 'SUPER_ADMIN';
 }
 
 declare global {

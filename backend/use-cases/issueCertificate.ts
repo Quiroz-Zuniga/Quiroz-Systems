@@ -88,18 +88,14 @@ export async function issueCertificateForUser(
       courseTitle,
       finalGradePercent: finalGradePercent,
       studyHours: Number(studyHours) || 45,
-      issueDate: new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }),
+      issueDate: new Date(),
       approvedBy: 'Quiroz Systems Admin',
     },
   });
 
   await prisma.courseProgress.update({
     where: { userId_courseId: { userId, courseId } },
-    data: { finalGradePercent: finalGradePercent, certificateUuid: cert.uuid, status: 'CERTIFIED', completionDate: new Date().toLocaleDateString('es-ES') },
+    data: { finalGradePercent: finalGradePercent, certificateUuid: cert.uuid, status: 'CERTIFIED', completionDate: new Date() },
   });
 
   return { success: true, issued: true, certificate: cert };

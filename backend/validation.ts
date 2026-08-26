@@ -24,7 +24,7 @@ const password = z.string().min(6, 'La contraseña debe tener al menos 6 caracte
 const courseId = z.string().min(1).max(32);
 
 export const registerSchema = z.object({
-  role: z.enum(['STUDENT', 'INSTRUCTOR']),
+  role: z.enum(['USUARIO', 'INSTITUCION', 'PENDIENTE_INSTITUCION']).default('USUARIO'),
   name: z.string().trim().min(1).max(120),
   email,
   password,
@@ -34,7 +34,7 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email,
   password,
-  role: z.enum(['STUDENT', 'INSTRUCTOR', 'SUPER_ADMIN']).optional(),
+  role: z.enum(['USUARIO', 'INSTITUCION', 'PENDIENTE_INSTITUCION', 'SUPER_ADMIN']).optional(),
 });
 
 export const executeSchema = z.object({
@@ -57,9 +57,6 @@ export const assessmentSchema = z.object({
   lessonId: z.string().min(1).max(64),
   language: z.string().min(1).max(32),
   code: z.string().min(1).max(50_000),
-  // SDD — testCases y schemaSql ya NO se aceptan del cliente: el backend los
-  // carga desde specs/lessons (fuente de verdad). Se permiten en el body solo
-  // por retrocompatibilidad del frontend, pero el evaluador los ignora.
   testCases: z
     .array(
       z.object({
@@ -97,12 +94,11 @@ const attemptSchema = z
   })
   .passthrough();
 
+// [B-B-001] Eliminar finalGradePercent y certificateUuid del body aceptado
 export const progressSchema = z.object({
   courseId,
   attempts: z.record(z.string().min(1).max(64), attemptSchema).optional(),
-  completionDate: z.string().max(40).optional(),
-  finalGradePercent: z.coerce.number().finite().max(100).optional(),
-  certificateUuid: z.string().max(100).optional(),
+  completionDate: z.string().datetime({ offset: true }).or(z.string().datetime()).optional(),
 });
 
 export const certificateIssueSchema = z.object({
@@ -111,48 +107,19 @@ export const certificateIssueSchema = z.object({
   studyHours: z.coerce.number().int().positive().max(10_000).optional(),
 });
 
-export const adminApproveInstructorSchema = z.object({
-  instructorId: z.string().min(1).max(120),
-  status: z.enum(['APPROVED', 'REJECTED']).optional(),
+// [B-A-003] Validaciones Zod añadidas
+export const subscriptionCreateSchema = z.object({
+  planId: z.enum(['BASICO', 'ESTANDAR', 'PREMIUM']).default('ESTANDAR'),
 });
 
-export const adminRegisterInstructorSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  email,
-  institutionName: z.string().trim().min(1).max(200),
-});
-
-export const adminAddUserSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  email,
-  institutionName: z.string().trim().max(200).optional(),
-  courseIds: z.array(courseId).max(100).optional(),
-});
-
-export const adminCheckUserTypeSchema = z.object({
-  email,
-});
-
-export const adminApproveCertificateSchema = z.object({
-  userId: z.string().max(120).optional(),
-  userName: z.string().trim().min(1).max(200),
-  userEmail: z.string().email().optional(),
+export const emitRecognitionSchema = z.object({
+  userId: z.string().min(1).max(120),
   courseId,
-  courseTitle: z.string().trim().min(1).max(200),
-  finalGradePercent: z.coerce.number().finite().max(100).optional(),
-  studyHours: z.coerce.number().int().positive().max(10_000).optional(),
-  approvedBy: z.string().max(200).optional(),
 });
 
-export const adminUpdateInstitutionSchema = z.object({
-  institutionId: z.string().min(1).max(120),
-  status: z.enum(['APPROVED', 'REJECTED', 'PENDING']),
-});
-
-export const adminAddInstructorSchema = z.object({
+export const institutionAddUserSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email,
-  institutionName: z.string().trim().min(1).max(200),
 });
 
 export const adminMonetizationConfigSchema = z.object({

@@ -82,7 +82,7 @@ progressRouter.get('/progress/:courseId', async (req, res) => {
       completedLessonIds,
       attempts: attemptsRecord,
       startDate: progress.startDate.toLocaleDateString('es-ES'),
-      completionDate: progress.completionDate || undefined,
+      completionDate: progress.completionDate ? progress.completionDate.toISOString() : undefined,
       finalGradePercent,
       certificateUuid: progress.certificateUuid || undefined,
     });
@@ -94,15 +94,14 @@ progressRouter.get('/progress/:courseId', async (req, res) => {
 
 progressRouter.post('/progress', validateBody(progressSchema), async (req, res) => {
   try {
-    const { courseId, attempts, completionDate, finalGradePercent, certificateUuid } = req.body;
+    const { courseId, attempts, completionDate } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
     if (!user) {
       return res.status(404).json({ error: 'Estudiante no encontrado.' });
     }
 
-    // Fase C1 — Persistencia atómica: curso + todos los intentos de lección en
-    // una sola transacción. Si falla, no quedan escrituras parciales.
+    // Fase C1 + B-B-001 — Persistencia atómica y recálculo server-side de nota final.
     await prisma.$transaction(async (tx) => {
       const progress = await tx.courseProgress.upsert({
         where: {
@@ -114,14 +113,10 @@ progressRouter.post('/progress', validateBody(progressSchema), async (req, res) 
         create: {
           userId: user.id,
           courseId,
-          completionDate: completionDate || null,
-          finalGradePercent: finalGradePercent ? Number(finalGradePercent) : null,
-          certificateUuid: certificateUuid || null,
+          completionDate: completionDate ? new Date(completionDate) : null,
         },
         update: {
-          completionDate: completionDate || undefined,
-          finalGradePercent: finalGradePercent ? Number(finalGradePercent) : undefined,
-          certificateUuid: certificateUuid || undefined,
+          completionDate: completionDate ? new Date(completionDate) : undefined,
         },
       });
 
@@ -164,6 +159,18 @@ progressRouter.post('/progress', validateBody(progressSchema), async (req, res) 
           });
         }
       }
+
+      // Recalcular finalGradePercent server-side
+      const passedAttempts = await tx.lessonAttempt.findMany({
+        where: { courseProgressId: progress.id, passed: true },
+      });
+      const totalMaxScore = getCourseMeta(courseId)?.totalMaxScore ?? 0;
+      const finalGradePercent = calculateCourseGrade(passedAttempts, totalMaxScore);
+
+      await tx.courseProgress.update({
+        where: { id: progress.id },
+        data: { finalGradePercent },
+      });
     });
 
     return res.json({ success: true });

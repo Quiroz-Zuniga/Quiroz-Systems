@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import { validateBody, progressSchema } from '../validation';
 import { calculateCourseGrade } from '../domain/rubric';
 import { getCourseMeta } from '../domain/courseRegistry';
+import type { LessonAttempt } from '../../shared/contracts';
 
 export const progressRouter = Router();
 
@@ -165,7 +166,20 @@ progressRouter.post('/progress', validateBody(progressSchema), async (req, res) 
         where: { courseProgressId: progress.id, passed: true },
       });
       const totalMaxScore = getCourseMeta(courseId)?.totalMaxScore ?? 0;
-      const finalGradePercent = calculateCourseGrade(passedAttempts, totalMaxScore);
+      const mappedAttempts: LessonAttempt[] = passedAttempts.map(a => ({
+        lessonId: a.lessonId,
+        attemptsCount: a.attemptsCount,
+        hintsUnlockedCount: a.hintsUnlockedCount,
+        timeSpentSeconds: a.timeSpentSeconds,
+        scoreObtained: a.scoreObtained,
+        functionalScore: a.functionalScore,
+        efficiencyScore: a.efficiencyScore,
+        timeScore: a.timeScore,
+        passed: a.passed,
+        completedAt: a.completedAt?.toISOString(),
+        submittedCode: a.submittedCode,
+      }));
+      const finalGradePercent = calculateCourseGrade(mappedAttempts, totalMaxScore);
 
       await tx.courseProgress.update({
         where: { id: progress.id },

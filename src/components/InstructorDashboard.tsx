@@ -176,7 +176,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
             <Plus className="w-4 h-4" />
             <span>Matricular Alumno</span>
           </button>
-          <button onClick={fetchStudents} disabled={loading} className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2.5 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-2 disabled:opacity-50">
+          <button onClick={() => fetchStudents()} disabled={loading} className="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-4 py-2.5 rounded-lg text-xs transition-all shadow-sm flex items-center space-x-2 disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Actualizar</span>
           </button>
@@ -186,7 +186,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ instru
       {fetchError && (
         <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono text-xs font-bold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span>{fetchError}</span>
-          <button onClick={fetchStudents} className="text-[11px] font-bold underline hover:no-underline">Reintentar conexión</button>
+          <button onClick={() => fetchStudents()} className="text-[11px] font-bold underline hover:no-underline">Reintentar conexión</button>
         </div>
       )}
 

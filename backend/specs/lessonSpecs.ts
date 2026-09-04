@@ -26,7 +26,9 @@ export interface LessonSpec {
   schemaSql?: string;
 }
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
+const HERE = typeof __dirname !== 'undefined'
+  ? __dirname
+  : (typeof import.meta !== 'undefined' && import.meta.url ? path.dirname(fileURLToPath(import.meta.url)) : process.cwd());
 const SPECS_LESSONS_DIR = path.join(HERE, '..', '..', 'specs', 'lessons');
 
 export function parseLessonSpec(filePath: string): Lesson {

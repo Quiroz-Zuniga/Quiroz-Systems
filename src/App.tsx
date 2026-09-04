@@ -19,6 +19,7 @@ import { CourseView } from './components/CourseView';
 import { GradeReportView } from './components/GradeReportView';
 import { CertificateVerifier } from './components/CertificateVerifier';
 import { InstructorDashboard } from './components/InstructorDashboard';
+import { InstitutionSubscriptionView } from './components/InstitutionSubscriptionView';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { LandingPage } from './components/LandingPage';
 import { LoginModal } from './components/LoginModal';
@@ -490,9 +491,28 @@ export default function App() {
           {/* Certificate Verifier Tab */}
           {activeTab === 'verifier' && <CertificateVerifier />}
 
-          {/* Instructor Dashboard (Docente only) */}
+          {/* Instructor Dashboard (Docente con suscripción activa) */}
           {activeTab === 'admin' && userRole === 'INSTITUCION' && (
             <InstructorDashboard instructorEmail={profile.email} instructorName={profile.name} />
+          )}
+
+          {/* Subscription Checkout & Plans (Docente pendiente de activación) */}
+          {activeTab === 'admin' && userRole === 'PENDIENTE_INSTITUCION' && (
+            <InstitutionSubscriptionView
+              institutionName={profile.name}
+              institutionEmail={profile.email}
+              theme={theme}
+              onStatusUpdated={async () => {
+                try {
+                  const { data, response: res } = await api.get<any>('/auth/me');
+                  if (res.ok && data?.user) {
+                    setUserRole(data.user.role);
+                  }
+                } catch (e) {
+                  console.error('Error refreshing session:', e);
+                }
+              }}
+            />
           )}
 
           {/* SuperAdmin Dashboard (Quiroz Systems only) */}

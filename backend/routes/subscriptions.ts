@@ -8,7 +8,7 @@ export const subscriptionsRouter = Router();
 // Endpoint para crear la suscripción en PayPal (inicia el flujo)
 subscriptionsRouter.post(
   '/subscriptions/create',
-  requireRole('PENDIENTE_INSTITUCION'),
+  requireRole('PENDIENTE_INSTITUCION', 'INSTITUCION'),
   validateBody(subscriptionCreateSchema),
   async (req: Request, res: Response) => {
     try {
@@ -47,7 +47,7 @@ subscriptionsRouter.post(
 );
 
 // Endpoint para consultar el estado real
-subscriptionsRouter.get('/subscriptions/status', requireRole('PENDIENTE_INSTITUCION'), async (req: Request, res: Response) => {
+subscriptionsRouter.get('/subscriptions/status', requireRole('PENDIENTE_INSTITUCION', 'INSTITUCION'), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -161,12 +161,12 @@ webhooksRouter.post('/webhooks/paypal', async (req: Request, res: Response) => {
 
     console.log(`Evento de PayPal verificado: ${eventType}`);
 
-    const institutionId = resource?.custom_id;
-    if (!institutionId) {
-      return res.status(200).send('OK - No custom_id');
-    }
-
     if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED') {
+      const institutionId = resource?.custom_id;
+      if (!institutionId) {
+        return res.status(200).send('OK - No custom_id for activation');
+      }
+
       const expirationDate = new Date();
       expirationDate.setMonth(expirationDate.getMonth() + 1);
 
@@ -185,35 +185,53 @@ webhooksRouter.post('/webhooks/paypal', async (req: Request, res: Response) => {
         data: { role: 'INSTITUCION' },
       });
     } else if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED' || eventType === 'BILLING.SUBSCRIPTION.EXPIRED') {
-      await prisma.subscription.updateMany({
-        where: { institution_id: institutionId, paypal_subscription_id: resource.id },
-        data: {
-          estado: eventType === 'BILLING.SUBSCRIPTION.CANCELLED' ? 'cancelada' : 'vencida',
-        },
-      });
-
-      await prisma.user.update({
-        where: { id: institutionId },
-        data: { role: 'PENDIENTE_INSTITUCION' },
-      });
-    } else if (eventType === 'PAYMENT.SALE.COMPLETED') {
-      const subscriptionIdLocal = resource.billing_agreement_id;
+      const paypalSubId = resource?.id;
+      const institutionId = resource?.custom_id;
 
       const sub = await prisma.subscription.findFirst({
-        where: { paypal_subscription_id: subscriptionIdLocal },
+        where: institutionId
+          ? { institution_id: institutionId }
+          : { paypal_subscription_id: paypalSubId },
       });
 
       if (sub) {
-        await prisma.transaction.create({
+        await prisma.subscription.update({
+          where: { id: sub.id },
           data: {
-            subscription_id: sub.id,
-            monto: parseFloat(resource.amount.total),
-            moneda: resource.amount.currency,
-            estado: 'completado',
-            fecha: new Date(resource.create_time),
-            referencia_paypal: resource.id,
+            estado: eventType === 'BILLING.SUBSCRIPTION.CANCELLED' ? 'cancelada' : 'vencida',
           },
         });
+
+        await prisma.user.update({
+          where: { id: sub.institution_id },
+          data: { role: 'PENDIENTE_INSTITUCION' },
+        });
+      }
+    } else if (eventType === 'PAYMENT.SALE.COMPLETED') {
+      const subscriptionIdLocal = resource?.billing_agreement_id || resource?.custom_id;
+
+      if (subscriptionIdLocal) {
+        const sub = await prisma.subscription.findFirst({
+          where: {
+            OR: [
+              { paypal_subscription_id: subscriptionIdLocal },
+              { id: subscriptionIdLocal },
+            ],
+          },
+        });
+
+        if (sub) {
+          await prisma.transaction.create({
+            data: {
+              subscription_id: sub.id,
+              monto: parseFloat(resource.amount.total),
+              moneda: resource.amount.currency,
+              estado: 'completado',
+              fecha: new Date(resource.create_time || Date.now()),
+              referencia_paypal: resource.id,
+            },
+          });
+        }
       }
     }
 

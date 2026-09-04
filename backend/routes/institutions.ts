@@ -58,7 +58,15 @@ institutionsRouter.post('/add-user', validateBody(institutionAddUserSchema), asy
       },
     });
 
-    res.json({ success: true, userUser });
+    res.json({
+      success: true,
+      userUser: {
+        id: userUser.id,
+        name: userUser.name,
+        email: userUser.email,
+        role: userUser.role,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ error: 'Error al agregar alumno' });
   }
@@ -72,7 +80,12 @@ institutionsRouter.get('/users', async (req: Request, res: Response) => {
       where: { institutionId },
       include: {
         user: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            createdAt: true,
             courseProgresses: true,
           },
         },

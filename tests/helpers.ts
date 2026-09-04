@@ -11,6 +11,7 @@ const TEST_DB_DIR = path.join(os.tmpdir(), 'quiroz-systems-tests');
 const TEST_DB_PATH = path.join(TEST_DB_DIR, 'test.db');
 
 export function setupTestDatabase(name = 'shared'): void {
+  process.env.NODE_ENV = 'test';
   // Cada archivo de test usa su propia SQLite temporal porque node:test
   // ejecuta los archivos en procesos paralelos (evita carreras sobre un
   // mismo archivo).

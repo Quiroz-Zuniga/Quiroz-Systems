@@ -43,6 +43,7 @@ model InstitutionStudent {
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([institutionId, userId])
+  @@index([userId])
 }
 
 model Course {
@@ -206,6 +207,7 @@ model Subscription {
   transactions Transaction[]
 
   @@index([institution_id])
+  @@index([paypal_subscription_id])
 }
 
 model Transaction {

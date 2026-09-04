@@ -54,26 +54,31 @@ adminRouter.get('/instructors', async (req: Request, res: Response) => {
       },
     });
 
-    // Mapear con su estado de suscripción real
-    const mapped = await Promise.all(
-      instructors.map(async (i) => {
-        const sub = await prisma.subscription.findFirst({
-          where: { institution_id: i.id },
-          orderBy: { createdAt: 'desc' },
-        });
+    const instructorIds = instructors.map((i) => i.id);
+    const subscriptions = await prisma.subscription.findMany({
+      where: { institution_id: { in: instructorIds } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const subMap = new Map<string, (typeof subscriptions)[0]>();
+    for (const sub of subscriptions) {
+      if (!subMap.has(sub.institution_id)) {
+        subMap.set(sub.institution_id, sub);
+      }
+    }
 
-        const approvalStatus = i.role === 'INSTITUCION' || sub?.estado === 'activa' ? 'APPROVED' : 'PENDING';
+    const mapped = instructors.map((i) => {
+      const sub = subMap.get(i.id);
+      const approvalStatus = i.role === 'INSTITUCION' || sub?.estado === 'activa' ? 'APPROVED' : 'PENDING';
 
-        return {
-          id: i.id,
-          name: i.name,
-          email: i.email,
-          approvalStatus,
-          institution: { name: i.name, status: approvalStatus },
-          createdAt: i.createdAt.toISOString(),
-        };
-      })
-    );
+      return {
+        id: i.id,
+        name: i.name,
+        email: i.email,
+        approvalStatus,
+        institution: { name: i.name, status: approvalStatus },
+        createdAt: i.createdAt.toISOString(),
+      };
+    });
 
     return res.json(mapped);
   } catch (error: any) {
@@ -94,27 +99,32 @@ adminRouter.get('/institutions', async (req: Request, res: Response) => {
       },
     });
 
-    const mapped = await Promise.all(
-      institutions.map(async (inst) => {
-        const adminUser = await prisma.user.findUnique({ where: { id: inst.id } });
-        const latestSub = inst.subscriptions[0];
-        const status = latestSub?.estado === 'activa' ? 'APPROVED' : 'PENDING';
+    const instIds = institutions.map((i) => i.id);
+    const adminUsers = await prisma.user.findMany({
+      where: { id: { in: instIds } },
+      select: { id: true, name: true, email: true },
+    });
+    const userMap = new Map(adminUsers.map((u) => [u.id, u]));
 
-        return {
-          id: inst.id,
-          name: inst.nombre,
-          teacherName: inst.nombre_docente_responsable || adminUser?.name || '',
-          code: inst.id.substring(0, 8),
-          adminEmail: adminUser?.email || '',
-          status,
-          plan: latestSub?.plan || 'NINGUNO',
-          maxAlumnos: latestSub?.max_alumnos || 0,
-          fechaExpiracion: latestSub?.fecha_expiracion ? latestSub.fecha_expiracion.toISOString() : null,
-          createdAt: inst.createdAt.toISOString(),
-          _count: { students: inst.students.length, instructors: 1 },
-        };
-      })
-    );
+    const mapped = institutions.map((inst) => {
+      const adminUser = userMap.get(inst.id);
+      const latestSub = inst.subscriptions[0];
+      const status = latestSub?.estado === 'activa' ? 'APPROVED' : 'PENDING';
+
+      return {
+        id: inst.id,
+        name: inst.nombre,
+        teacherName: inst.nombre_docente_responsable || adminUser?.name || '',
+        code: inst.id.substring(0, 8),
+        adminEmail: adminUser?.email || '',
+        status,
+        plan: latestSub?.plan || 'NINGUNO',
+        maxAlumnos: latestSub?.max_alumnos || 0,
+        fechaExpiracion: latestSub?.fecha_expiracion ? latestSub.fecha_expiracion.toISOString() : null,
+        createdAt: inst.createdAt.toISOString(),
+        _count: { students: inst.students.length, instructors: 1 },
+      };
+    });
 
     return res.json({ institutions: mapped });
   } catch (error: any) {

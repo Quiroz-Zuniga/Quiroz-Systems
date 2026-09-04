@@ -19,11 +19,14 @@ coursesRouter.get('/courses', async (req: Request, res: Response) => {
     if (!loggedIn) {
       const courses = await prisma.course.findMany({
         where: { es_muestra: true },
+        orderBy: { order: 'asc' },
         take: 2,
       });
       return res.json(courses);
     } else {
-      const courses = await prisma.course.findMany();
+      const courses = await prisma.course.findMany({
+        orderBy: { order: 'asc' },
+      });
       return res.json(courses);
     }
   } catch (error: any) {

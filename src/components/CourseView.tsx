@@ -209,6 +209,12 @@ export const CourseView: React.FC<CourseViewProps> = ({
     }
   };
 
+  const handleResetCode = () => {
+    if (window.confirm('¿Deseas restablecer el código a la plantilla inicial del ejercicio?')) {
+      setUserCode(currentLesson.exercise.initialCode);
+    }
+  };
+
   const handleRunCode = async () => {
     setIsRunning(true);
     setExecutionResult(null);
@@ -407,6 +413,7 @@ export const CourseView: React.FC<CourseViewProps> = ({
                 language={course.monacoLanguage}
                 value={userCode}
                 onChange={(val) => setUserCode(val)}
+                onReset={handleResetCode}
                 height="380px"
                 theme={theme === 'dark' ? 'vs-dark' : 'vs'}
               />

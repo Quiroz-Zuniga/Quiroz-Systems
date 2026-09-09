@@ -59,11 +59,34 @@ export function buildApp(): express.Express {
   });
 
   // Fase A6 — Hardening y red.
-  // 1. Helmet: headers de seguridad (CSP, nosniff, HSTS, etc.).
+  // 1. Helmet: headers de seguridad con CSP configurado para Iconify, Monaco y PayPal.
   // 2. CORS con allowlist explícita (CORS_ORIGINS) en lugar de `cors()` abierto.
   // 3. Rate-limit global por IP sobre toda la API (express-rate-limit).
   // 4. Límite de payload razonable (JSON body) en vez de '10mb'.
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://www.paypal.com", "https://*.paypal.com"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+          imgSrc: ["'self'", "data:", "blob:", "https:"],
+          connectSrc: [
+            "'self'",
+            "https://api.iconify.design",
+            "https://api.unisvg.com",
+            "https://api.simplesvg.com",
+            "https://generativelanguage.googleapis.com",
+            "https://www.paypal.com",
+            "https://*.paypal.com",
+          ],
+          workerSrc: ["'self'", "blob:"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+    })
+  );
 
   const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:4000')
     .split(',')

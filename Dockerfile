@@ -6,8 +6,11 @@
 # =====================================================================
 
 # ---- Stage 1: build ----
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
+
+# Instala librerías nativas requeridas por Prisma en Alpine
+RUN apk add --no-cache openssl libc6-compat
 
 # Dependencias primero (aprovecha caché de capas).
 COPY package.json package-lock.json ./
@@ -24,18 +27,23 @@ COPY . .
 RUN npm run build:frontend && npm run build:backend
 
 # ---- Stage 2: runtime ----
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Solo dependencias de producción + cliente Prisma regenerado.
+# Instala librerías nativas requeridas por Prisma en Alpine
+RUN apk add --no-cache openssl libc6-compat
+
+# Copia dependencias y esquema Prisma antes de generar el cliente
 COPY package.json package-lock.json ./
+COPY prisma ./prisma
+
+# Solo dependencias de producción + cliente Prisma regenerado.
 RUN npm ci --omit=dev && npx prisma generate
 
 # Copia el build completo: frontend estático + server bundle.
 COPY --from=build /app/dist ./dist
-COPY prisma ./prisma
 
 EXPOSE 4000
 CMD ["node", "dist/server.cjs"]

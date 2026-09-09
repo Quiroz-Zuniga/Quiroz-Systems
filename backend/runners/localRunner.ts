@@ -87,7 +87,7 @@ export async function runLocalCode(params: RunPistonParams): Promise<PistonRunRe
   const tmpDir = createTempDir();
 
   try {
-    if (language === 'python') {
+    if (language === 'python' || language === 'py' || language === 'python3') {
       const filePath = path.join(tmpDir, 'main.py');
       fs.writeFileSync(filePath, code, 'utf8');
       const res = await runProcess('python3', [filePath], tmpDir, stdin, runTimeoutMs);
@@ -100,7 +100,7 @@ export async function runLocalCode(params: RunPistonParams): Promise<PistonRunRe
       };
     }
 
-    if (language === 'javascript' || language === 'nodejs') {
+    if (language === 'javascript' || language === 'js' || language === 'nodejs' || language === 'node') {
       const filePath = path.join(tmpDir, 'main.js');
       fs.writeFileSync(filePath, code, 'utf8');
       const res = await runProcess(process.execPath || 'node', [filePath], tmpDir, stdin, runTimeoutMs);
@@ -113,7 +113,7 @@ export async function runLocalCode(params: RunPistonParams): Promise<PistonRunRe
       };
     }
 
-    if (language === 'cpp' || language === 'cplusplus') {
+    if (language === 'cpp' || language === 'c++' || language === 'cplusplus' || language === 'c') {
       const srcPath = path.join(tmpDir, 'main.cpp');
       const binPath = path.join(tmpDir, 'main.out');
       fs.writeFileSync(srcPath, code, 'utf8');
@@ -172,7 +172,7 @@ export async function runLocalCode(params: RunPistonParams): Promise<PistonRunRe
       };
     }
 
-    if (language === 'rust') {
+    if (language === 'rust' || language === 'rs') {
       const srcPath = path.join(tmpDir, 'main.rs');
       const binPath = path.join(tmpDir, 'main.out');
       fs.writeFileSync(srcPath, code, 'utf8');

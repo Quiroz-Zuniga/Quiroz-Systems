@@ -31,8 +31,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Instala librerías nativas requeridas por Prisma en Alpine
-RUN apk add --no-cache openssl libc6-compat
+# Instala librerías nativas requeridas por Prisma y compiladores locales para los cursos
+RUN apk add --no-cache openssl libc6-compat python3 g++ gcc libstdc++ make openjdk17-jdk rust
 
 # Copia dependencias y esquema Prisma antes de generar el cliente
 COPY package.json package-lock.json ./

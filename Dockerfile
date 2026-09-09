@@ -1,8 +1,7 @@
 # =====================================================================
-# Quiroz Systems — Dockerfile multi-stage
-# Fase C5: compila el frontend (Vite) y el backend (esbuild) en un stage
-# de build, y genera una imagen de runtime mínima que sirve BOTH en el
-# puerto 4000 (API + estáticos). El frontend build es servido por Express.
+# Quiroz Systems — Dockerfile multi-stage (Node 22 LTS Alpine)
+# Fase C5: compila frontend (Vite) y backend (esbuild) en build stage.
+# Runtime stage mínimo que sirve API + Frontend estático.
 # =====================================================================
 
 # ---- Stage 1: build ----

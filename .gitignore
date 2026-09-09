@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+reporte/
+informe.html
+informe_tecnico.html

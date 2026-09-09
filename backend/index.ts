@@ -19,10 +19,10 @@ try {
 }
 
 const app = buildApp();
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 4000;
 
-const server = app.listen(PORT, () => {
-  console.log(`[Quiroz Systems Backend API] Servidor Express ejecutándose en http://localhost:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Quiroz Systems Backend API] Servidor Express ejecutándose en http://0.0.0.0:${PORT}`);
   // Fase C3 — Limpieza periódica de sesiones expiradas.
   scheduleSessionCleanup();
 });

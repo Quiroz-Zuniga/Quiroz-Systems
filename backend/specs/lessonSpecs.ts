@@ -29,7 +29,21 @@ export interface LessonSpec {
 const HERE = typeof __dirname !== 'undefined'
   ? __dirname
   : (typeof import.meta !== 'undefined' && import.meta.url ? path.dirname(fileURLToPath(import.meta.url)) : process.cwd());
-const SPECS_LESSONS_DIR = path.join(HERE, '..', '..', 'specs', 'lessons');
+
+export function getSpecsLessonsDir(): string {
+  const candidates = [
+    path.join(process.cwd(), 'specs', 'lessons'),
+    path.join(HERE, 'specs', 'lessons'),
+    path.join(HERE, '..', 'specs', 'lessons'),
+    path.join(HERE, '..', '..', 'specs', 'lessons'),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(dir)) return dir;
+  }
+  return path.join(process.cwd(), 'specs', 'lessons');
+}
+
+const SPECS_LESSONS_DIR = getSpecsLessonsDir();
 
 export function parseLessonSpec(filePath: string): Lesson {
   const raw = readFileSync(filePath, 'utf8');
@@ -79,9 +93,22 @@ export function toLessonSpec(lesson: Lesson, courseId: string): LessonSpec {
 // Fuente de verdad: resuelve una lección registrada por (courseId, lessonId).
 // Devuelve null si la lección no está versionada en specs/lessons.
 export function getLessonSpec(courseId: string, lessonId: string): LessonSpec | null {
-  const courseDir = path.join(SPECS_LESSONS_DIR, courseId);
+  const dir = getSpecsLessonsDir();
+  const courseDir = path.join(dir, courseId);
   const filePath = path.join(courseDir, `${lessonId}.yaml`);
-  if (!existsSync(filePath)) return null;
+  if (!existsSync(filePath)) {
+    // Intenta buscar directamente por si el yaml está en el root de specs/lessons
+    const directPath = path.join(dir, `${lessonId}.yaml`);
+    if (existsSync(directPath)) {
+      try {
+        const lesson = parseLessonSpec(directPath);
+        return toLessonSpec(lesson, courseId);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
   try {
     const lesson = parseLessonSpec(filePath);
     return toLessonSpec(lesson, courseId);

@@ -74,6 +74,8 @@ export function buildApp(): express.Express {
           imgSrc: ["'self'", "data:", "blob:", "https:"],
           connectSrc: [
             "'self'",
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
             "https://api.iconify.design",
             "https://api.unisvg.com",
             "https://api.simplesvg.com",

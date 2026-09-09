@@ -43,6 +43,7 @@ RUN npm ci --omit=dev && npx prisma generate
 
 # Copia el build completo: frontend estático + server bundle.
 COPY --from=build /app/dist ./dist
+COPY specs ./specs
 
 EXPOSE 4000
 CMD ["node", "dist/server.cjs"]

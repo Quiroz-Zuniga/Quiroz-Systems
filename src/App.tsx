@@ -198,6 +198,11 @@ export default function App() {
     setIsLoginModalOpen(true);
   };
 
+  const isLoggedIn = Boolean(
+    (profile.email && profile.email !== defaultProfile.email) ||
+    restoredSessionRef.current?.profile?.email
+  );
+
   const handleLoginSuccess = async (userProfile: StudentProfile, role: UserRole) => {
     setProfile(userProfile);
     saveStudentProfile(userProfile);
@@ -206,6 +211,15 @@ export default function App() {
     restoredSessionRef.current = { profile: userProfile, role };
     setIsLoginModalOpen(false);
     setIsRegisterModalOpen(false);
+
+    try {
+      const { data, response: res } = await api.get<any[]>('/courses');
+      if (res.ok && Array.isArray(data)) {
+        setAllowedCourseIds(data.map((c: any) => c.id));
+      }
+    } catch {
+      // noop
+    }
 
     if (role === 'USUARIO') {
       setActiveTab('catalog');
@@ -277,7 +291,8 @@ export default function App() {
           onOpenRegister={handleOpenRegister}
           onExploreCourses={(course?: Course) => {
             if (course) {
-              if (allowedCourseIds.includes(course.id) || allowedCourseIds.length === 0) {
+              const isAllowed = isLoggedIn || allowedCourseIds.includes(course.id) || course.id === 'cpp' || course.id === 'python' || allowedCourseIds.length === 0;
+              if (isAllowed) {
                 // Visitante entra al curso de muestra
                 if (!restoredSessionRef.current) {
                   setProfile(defaultProfile);
@@ -357,7 +372,8 @@ export default function App() {
             <CourseCatalog
               courses={allCourses}
               onSelectCourse={(course) => {
-                if (allowedCourseIds.includes(course.id) || allowedCourseIds.length === 0) {
+                const isAllowed = isLoggedIn || allowedCourseIds.includes(course.id) || course.id === 'cpp' || course.id === 'python' || allowedCourseIds.length === 0;
+                if (isAllowed) {
                   handleSelectCourse(course);
                 } else {
                   alert('Inicia sesión para ver todos los cursos gratuitos');

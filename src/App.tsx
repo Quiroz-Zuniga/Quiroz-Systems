@@ -35,6 +35,7 @@ export default function App() {
   const [userRole, setUserRole] = useState<UserRole>('USUARIO');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
+  const [registerRole, setRegisterRole] = useState<'USUARIO' | 'INSTITUCION'>('USUARIO');
 
   const restoredSessionRef = useRef<{ profile: StudentProfile; role: UserRole } | null>(null);
 
@@ -182,6 +183,7 @@ export default function App() {
   };
 
   const handleOpenRegister = (defaultRole: 'USUARIO' | 'INSTITUCION' = 'USUARIO') => {
+    setRegisterRole(defaultRole);
     setIsLoginModalOpen(false);
     setIsRegisterModalOpen(true);
   };
@@ -311,6 +313,7 @@ export default function App() {
           onClose={() => setIsRegisterModalOpen(false)}
           onSwitchToLogin={handleSwitchToLogin}
           theme={theme}
+          initialRole={registerRole}
         />
 
         <CoffeeSupportModal theme={theme} />
@@ -343,6 +346,8 @@ export default function App() {
           setTheme={setTheme}
           userRole={userRole}
           onLogout={handleLogout}
+          onOpenLogin={handleOpenLogin}
+          onOpenRegister={handleOpenRegister}
         />
 
         {/* Main Container */}
@@ -533,6 +538,22 @@ export default function App() {
           </p>
         </footer>
       </div>
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onSwitchToRegister={handleSwitchToRegister}
+        theme={theme}
+      />
+
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onSwitchToLogin={handleSwitchToLogin}
+        theme={theme}
+        initialRole={registerRole}
+      />
 
       <CoffeeSupportModal theme={theme} />
     </div>

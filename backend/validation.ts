@@ -25,10 +25,10 @@ const courseId = z.string().min(1).max(32);
 
 export const registerSchema = z.object({
   role: z.enum(['USUARIO', 'INSTITUCION', 'PENDIENTE_INSTITUCION']).default('USUARIO'),
-  name: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1, 'El nombre es obligatorio.').max(120),
   email,
   password,
-  institutionName: z.string().trim().min(1).max(200).optional(),
+  institutionName: z.union([z.string().trim().max(200), z.literal('')]).nullable().optional(),
 });
 
 export const loginSchema = z.object({

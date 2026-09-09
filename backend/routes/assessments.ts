@@ -22,10 +22,10 @@ assessmentsRouter.post('/assessments', validateBody(assessmentSchema), async (re
       timeSpentSeconds = 0,
     } = req.body;
 
-    const user = req.user!;
+    const user = req.user;
 
     const result = await evaluateLesson({
-      userId: user.id,
+      userId: user?.id,
       courseId,
       lessonId,
       language,

@@ -25,7 +25,7 @@ export class LessonNotRegisteredError extends Error {
   }
 }
 
-export type EvaluateLessonParams = AssessmentRequest & { userId: string };
+export type EvaluateLessonParams = AssessmentRequest & { userId?: string };
 
 export type EvaluateLessonResult = AssessmentResponse;
 
@@ -64,87 +64,88 @@ export async function evaluateLesson(params: EvaluateLessonParams): Promise<Eval
     submittedCode: code,
   });
 
-  // NOTA: persistencia transaccional. La evaluación NO se marca como aprobada
-  // salvo que el backend lo certifique.
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    throw new Error('Estudiante no encontrado.');
-  }
+  let finalGradePercent: number | undefined = undefined;
 
-  const { courseProgress, finalGradePercent } = await prisma.$transaction(async (tx) => {
-    const courseProgress = await tx.courseProgress.upsert({
-      where: { userId_courseId: { userId, courseId } },
-      create: { userId, courseId },
-      update: {},
-    });
+  // NOTA: persistencia transaccional cuando el usuario está autenticado.
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      const txResult = await prisma.$transaction(async (tx) => {
+        const courseProgress = await tx.courseProgress.upsert({
+          where: { userId_courseId: { userId, courseId } },
+          create: { userId, courseId },
+          update: {},
+        });
 
-    await tx.lessonAttempt.upsert({
-      where: { courseProgressId_lessonId: { courseProgressId: courseProgress.id, lessonId } },
-      create: {
-        courseProgressId: courseProgress.id,
-        lessonId,
-        attemptsCount: Number(attemptsCount),
-        hintsUnlockedCount: Number(hintsUnlockedCount),
-        timeSpentSeconds: Number(timeSpentSeconds),
-        scoreObtained: grade.scoreObtained,
-        functionalScore: grade.functionalScore,
-        efficiencyScore: grade.efficiencyScore,
-        timeScore: grade.timeScore,
-        passed: grade.passed,
-        submittedCode: code,
-        completedAt: grade.completedAt ? new Date(grade.completedAt) : null,
-      },
-      update: {
-        attemptsCount: Number(attemptsCount),
-        hintsUnlockedCount: Number(hintsUnlockedCount),
-        timeSpentSeconds: Number(timeSpentSeconds),
-        scoreObtained: grade.scoreObtained,
-        functionalScore: grade.functionalScore,
-        efficiencyScore: grade.efficiencyScore,
-        timeScore: grade.timeScore,
-        passed: grade.passed,
-        submittedCode: code,
-        completedAt: grade.passed ? new Date() : undefined,
-      },
-    });
+        await tx.lessonAttempt.upsert({
+          where: { courseProgressId_lessonId: { courseProgressId: courseProgress.id, lessonId } },
+          create: {
+            courseProgressId: courseProgress.id,
+            lessonId,
+            attemptsCount: Number(attemptsCount),
+            hintsUnlockedCount: Number(hintsUnlockedCount),
+            timeSpentSeconds: Number(timeSpentSeconds),
+            scoreObtained: grade.scoreObtained,
+            functionalScore: grade.functionalScore,
+            efficiencyScore: grade.efficiencyScore,
+            timeScore: grade.timeScore,
+            passed: grade.passed,
+            submittedCode: code,
+            completedAt: grade.completedAt ? new Date(grade.completedAt) : null,
+          },
+          update: {
+            attemptsCount: Number(attemptsCount),
+            hintsUnlockedCount: Number(hintsUnlockedCount),
+            timeSpentSeconds: Number(timeSpentSeconds),
+            scoreObtained: grade.scoreObtained,
+            functionalScore: grade.functionalScore,
+            efficiencyScore: grade.efficiencyScore,
+            timeScore: grade.timeScore,
+            passed: grade.passed,
+            submittedCode: code,
+            completedAt: grade.passed ? new Date() : undefined,
+          },
+        });
 
-    // Recalcular la nota final del curso en el servidor (rúbrica sobre los
-    // intentos reales persistidos, no sobre datos del cliente).
-    const attempts = await tx.lessonAttempt.findMany({
-      where: { courseProgressId: courseProgress.id, passed: true },
-      select: {
-        lessonId: true,
-        attemptsCount: true,
-        hintsUnlockedCount: true,
-        timeSpentSeconds: true,
-        scoreObtained: true,
-        functionalScore: true,
-        efficiencyScore: true,
-        timeScore: true,
-        passed: true,
-        submittedCode: true,
-      },
-    });
-    const totalMaxScore = meta?.totalMaxScore ?? 0;
-    const finalGradePercent = calculateCourseGrade(attempts, totalMaxScore);
-    const passedLessonIds = attempts.map((a) => a.lessonId);
-    const completedAll = isCourseCompleted(passedLessonIds, courseId);
+        // Recalcular la nota final del curso en el servidor (rúbrica sobre los
+        // intentos reales persistidos, no sobre datos del cliente).
+        const attempts = await tx.lessonAttempt.findMany({
+          where: { courseProgressId: courseProgress.id, passed: true },
+          select: {
+            lessonId: true,
+            attemptsCount: true,
+            hintsUnlockedCount: true,
+            timeSpentSeconds: true,
+            scoreObtained: true,
+            functionalScore: true,
+            efficiencyScore: true,
+            timeScore: true,
+            passed: true,
+            submittedCode: true,
+          },
+        });
+        const totalMaxScore = meta?.totalMaxScore ?? 0;
+        const finalGrade = calculateCourseGrade(attempts, totalMaxScore);
+        const passedLessonIds = attempts.map((a) => a.lessonId);
+        const completedAll = isCourseCompleted(passedLessonIds, courseId);
 
-    const updateData: any = { finalGradePercent };
-    if (completedAll && courseProgress.status === 'IN_PROGRESS') {
-      updateData.status = 'APPROVED';
-      updateData.completionDate = new Date();
+        const updateData: any = { finalGradePercent: finalGrade };
+        if (completedAll && courseProgress.status === 'IN_PROGRESS') {
+          updateData.status = 'APPROVED';
+          updateData.completionDate = new Date();
+        }
+
+        await tx.courseProgress.update({
+          where: { id: courseProgress.id },
+          data: updateData,
+        });
+
+        return { finalGradePercent: finalGrade };
+      });
+
+      finalGradePercent = txResult.finalGradePercent;
     }
-
-    await tx.courseProgress.update({
-      where: { id: courseProgress.id },
-      data: updateData,
-    });
-
-    return { courseProgress, finalGradePercent };
-  });
-
-  void courseProgress;
+  }
 
   return {
     passed: execResult.passed,
@@ -152,6 +153,6 @@ export async function evaluateLesson(params: EvaluateLessonParams): Promise<Eval
     logs: execResult.logs,
     timeMs: execResult.timeMs,
     grade,
-    finalGradePercent,
+    finalGradePercent: finalGradePercent ?? (grade.passed ? grade.scoreObtained : 0),
   };
 }

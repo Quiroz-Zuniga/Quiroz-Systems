@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Award, CheckCircle2, ShieldCheck, User, Search, Bell, Settings, ChevronDown, Code2, X, Play, Trash2, Check, Sun, Moon, LogOut, Coffee } from 'lucide-react';
+import { BookOpen, Award, CheckCircle2, ShieldCheck, User, Search, Bell, Settings, ChevronDown, Code2, X, Play, Trash2, Check, Sun, Moon, LogOut, Coffee, LogIn, UserPlus } from 'lucide-react';
 import { StudentProfile, UserRole } from '../types';
 import { CodeEditor } from './CodeEditor';
 import { api } from '../lib/apiClient';
@@ -17,6 +17,8 @@ interface NavbarProps {
   setTheme: (theme: 'dark' | 'light') => void;
   userRole: UserRole;
   onLogout: () => void;
+  onOpenLogin?: () => void;
+  onOpenRegister?: (role?: 'USUARIO' | 'INSTITUCION') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -31,6 +33,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setTheme,
   userRole,
   onLogout,
+  onOpenLogin,
+  onOpenRegister,
 }) => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -266,42 +270,75 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className={`h-5 w-[1px] hidden sm:block ${isDark ? 'bg-[#333333]' : 'bg-gray-200'}`} />
 
-          {/* User Profile Button */}
-          <button
-            onClick={() => setIsEditProfileOpen(true)}
-            className={`flex items-center space-x-2 border px-2.5 py-1 rounded-full transition-colors text-left cursor-pointer ${
-              isDark ? 'bg-[#262626] hover:bg-[#333333] border-[#333333]' : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-            }`}
-          >
-            <div className="w-7 h-7 rounded-full bg-[#1a73e8] text-white flex items-center justify-center text-xs font-bold shadow-sm">
-              {profile.name.charAt(0).toUpperCase()}
+          {/* User Profile / Login / Register Section */}
+          {!profile.email ? (
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <button
+                onClick={onOpenLogin}
+                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-sm flex items-center space-x-1 cursor-pointer"
+                title="Iniciar sesión con tu cuenta"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Iniciar Sesión</span>
+              </button>
+              <button
+                onClick={() => onOpenRegister?.('USUARIO')}
+                className={`text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center space-x-1 ${
+                  isDark
+                    ? 'border-[#333333] hover:bg-[#262626] text-gray-200'
+                    : 'border-gray-200 hover:bg-gray-100 text-gray-700'
+                }`}
+                title="Crear cuenta gratuita"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Registrarse</span>
+              </button>
+              <button
+                onClick={() => setIsEditProfileOpen(true)}
+                className={`p-1.5 rounded-full border transition-colors cursor-pointer ${
+                  isDark ? 'bg-[#262626] hover:bg-[#333333] border-[#333333] text-gray-300' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700'
+                }`}
+                title="Personalizar nombre de visitante"
+              >
+                <User className="w-4 h-4" />
+              </button>
             </div>
-            <div className="hidden sm:block text-xs pr-1">
-              <p className="font-semibold text-gray-800 dark:text-white truncate max-w-[120px]">
-                {profile.name}
-              </p>
-              <p className="text-[10px] text-[#1a73e8] font-medium font-mono uppercase">
-                {userRole === 'SUPER_ADMIN'
-                  ? 'SuperAdmin'
-                  : isTeacher
-                  ? 'Docente'
-                  : profile.email
-                  ? 'Estudiante'
-                  : 'Invitado'}
-              </p>
-            </div>
-          </button>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setIsEditProfileOpen(true)}
+                className={`flex items-center space-x-2 border px-2.5 py-1 rounded-full transition-colors text-left cursor-pointer ${
+                  isDark ? 'bg-[#262626] hover:bg-[#333333] border-[#333333]' : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-full bg-[#1a73e8] text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                  {profile.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="hidden sm:block text-xs pr-1">
+                  <p className="font-semibold text-gray-800 dark:text-white truncate max-w-[120px]">
+                    {profile.name}
+                  </p>
+                  <p className="text-[10px] text-[#1a73e8] font-medium font-mono uppercase">
+                    {userRole === 'SUPER_ADMIN'
+                      ? 'SuperAdmin'
+                      : isTeacher
+                      ? 'Docente'
+                      : 'Estudiante'}
+                  </p>
+                </div>
+              </button>
 
-          {/* Logout Button */}
-          <button
-            onClick={onLogout}
-            title="Cerrar Sesión (Volver al Inicio)"
-            className={`p-2 rounded-full transition-colors cursor-pointer ${
-              isDark ? 'text-rose-400 hover:bg-rose-950/40' : 'text-rose-600 hover:bg-rose-50'
-            }`}
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+              <button
+                onClick={onLogout}
+                title="Cerrar Sesión (Volver al Inicio)"
+                className={`p-2 rounded-full transition-colors cursor-pointer ${
+                  isDark ? 'text-rose-400 hover:bg-rose-950/40' : 'text-rose-600 hover:bg-rose-50'
+                }`}
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -16,6 +16,7 @@ import { coursesRouter } from './routes/courses';
 import { institutionsRouter } from './routes/institutions';
 import { monetizationRouter } from './routes/monetization';
 import { subscriptionsRouter, webhooksRouter } from './routes/subscriptions';
+import { getSessionToken, findSessionAccount } from './session';
 import { authRequired } from './middleware/auth';
 import { prisma } from './db';
 
@@ -102,16 +103,17 @@ export function buildApp(): express.Express {
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
 
-  // Fase A1 — Auth MW obligatoria.
-  // Protege TODAS las rutas /api/* salvo la lista pública explícita
-  // (registro, inicio de sesión y verificación pública de certificados).
-  // Cualquier ruta nueva queda protegida por defecto (default-deny).
+  // Fase A1 — Auth MW.
+  // Rutas públicas explícitas (registro, login, verificación, catálogo y evaluación de código).
+  // Rutas privadas (perfil, progreso autenticado, certificados, administración) requieren auth.
   const PUBLIC_API_PATHS = [
     '/auth/register',
     '/auth/login',
     '/auth/me',
     '/auth/logout',
     '/courses',
+    '/execute',
+    '/assessments',
     '/certificates/verify',
     '/monetization-config',
     '/health',
@@ -123,7 +125,25 @@ export function buildApp(): express.Express {
     globalApiLimiter(req, res, next);
   });
 
-  app.use('/api', (req, res, next) => {
+  app.use('/api', async (req, res, next) => {
+    // Si la solicitud incluye token o cookie de sesión válida, resolver req.user
+    const token = getSessionToken(req);
+    if (token) {
+      try {
+        const account = await findSessionAccount(token);
+        if (account?.user) {
+          req.user = {
+            id: account.user.id,
+            email: account.user.email,
+            name: account.user.name,
+            role: account.user.role as any,
+          };
+        }
+      } catch {
+        // noop
+      }
+    }
+
     const isPublic = PUBLIC_API_PATHS.some(
       (p) => req.path === p || req.path.startsWith(`${p}/`)
     );
@@ -144,8 +164,7 @@ export function buildApp(): express.Express {
   app.use('/api', subscriptionsRouter);
   app.use('/api', webhooksRouter);
 
-  // Fase C5 — En producción sirve el frontend compilado (dist/public) desde
-  // Express. En tests no existe, así que se omite.
+  // Fase C5 — En producción sirve el frontend compilado (dist/public) desde Express.
   const distDir = path.join(HERE, '..');
   const frontendDist = path.join(distDir, 'dist', 'public');
   const hasStaticApp = fs.existsSync(path.join(frontendDist, 'index.html'));
@@ -174,10 +193,10 @@ export function buildApp(): express.Express {
     });
   });
 
-  // Sirve los estáticos del frontend si existen (montaje de producción).
-  if (hasStaticApp && process.env.NODE_ENV === 'production') {
+  // Sirve los estáticos del frontend si existen.
+  if (hasStaticApp) {
     app.use(express.static(frontendDist));
-    // SPA fallback: cualquier ruta no-API cae al index.html (Rutas con Router).
+    // SPA fallback: cualquier ruta no-API cae al index.html.
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api')) return next();
       res.sendFile(path.join(frontendDist, 'index.html'));

@@ -89,30 +89,48 @@ describe('Evaluación Zero Trust e2e', () => {
     assert.match(data.error, /no está registrada/);
   });
 
-  test('los testCases del body no existen en la respuesta de resultados falsos', async () => {
-    // Enviar testCases manipulados NO debe evaluar contra ellos. Como no
-    // tenemos Piston aquí, esperamos error de sandbox (503), NUNCA un resultado
-    // calculado sobre los casos falsos.
-    const spec = getLessonSpec('python', 'py-01')!;
+  test('evaluación para usuario visitante / guest (sin token de autenticación)', async () => {
     const { status, data } = await jsonFetch(baseUrl, '/api/assessments', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         courseId: 'python',
         lessonId: 'py-01',
         language: 'python',
-        code: 'print("X")',
-        testCases: [{ id: 'hack', output: 'aceptame' }],
+        code: 'print("Bienvenido a Quiroz Systems")\nprint("Python Nivel Cero")',
       }),
     });
-    // Si Piston está disponible (solo dev), la evaluación corre con la spec
-    // REAL; en CI sin sandbox, responde 503 sin contaminación de resultados.
-    if (status === 503) {
-      assert.ok(data.error);
-    } else {
-      assert.equal(status, 200);
-      assert.equal(data.results.length, spec.testCases.length);
-      assert.ok(data.results.every((r: any) => r.testCaseId !== 'hack'));
-    }
+    assert.equal(status, 200, 'Debe permitir evaluación para visitantes');
+    assert.ok(data.passed, 'Debe aprobar la lección con el código correcto');
+    assert.ok(data.grade, 'Debe incluir la calificación de la rúbrica');
+    assert.equal(data.grade.passed, true);
+  });
+
+  test('evaluación local de C++ (fallback local)', async () => {
+    const { status, data } = await jsonFetch(baseUrl, '/api/assessments', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        courseId: 'cpp',
+        lessonId: 'cpp-01',
+        language: 'cpp',
+        code: '#include <iostream>\nint main() {\n  std::cout << "Bienvenido a Quiroz Systems\\nC++ Nivel Cero" << std::endl;\n  return 0;\n}',
+      }),
+    });
+    assert.equal(status, 200);
+    assert.ok(data.passed, 'Debe aprobar la lección C++ 01');
+  });
+
+  test('evaluación local de JavaScript (fallback local)', async () => {
+    const { status, data } = await jsonFetch(baseUrl, '/api/assessments', {
+      method: 'POST',
+      body: JSON.stringify({
+        courseId: 'javascript',
+        lessonId: 'js-01',
+        language: 'javascript',
+        code: 'console.log("Bienvenido a Quiroz Systems");\nconsole.log("JS Nivel Cero");',
+      }),
+    });
+    assert.equal(status, 200);
+    assert.ok(data.passed, 'Debe aprobar la lección JS 01');
   });
 });

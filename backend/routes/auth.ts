@@ -65,8 +65,13 @@ authRouter.post('/auth/register', validateBody(registerSchema), async (req: Requ
         ? String(req.body.institutionName).trim()
         : String(name).trim();
 
-      await prisma.institution.create({
-        data: {
+      await prisma.institution.upsert({
+        where: { id: user.id },
+        update: {
+          nombre: institutionTitle,
+          nombre_docente_responsable: String(name).trim(),
+        },
+        create: {
           id: user.id,
           nombre: institutionTitle,
           nombre_docente_responsable: String(name).trim(),

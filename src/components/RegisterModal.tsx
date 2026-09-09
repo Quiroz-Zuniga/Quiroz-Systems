@@ -10,10 +10,17 @@ interface RegisterModalProps {
   onClose: () => void;
   onSwitchToLogin: () => void;
   theme: 'dark' | 'light';
+  initialRole?: RegisterRole;
 }
 
-export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitchToLogin, theme }) => {
-  const [role, setRole] = useState<RegisterRole>('USUARIO');
+export const RegisterModal: React.FC<RegisterModalProps> = ({
+  isOpen,
+  onClose,
+  onSwitchToLogin,
+  theme,
+  initialRole = 'USUARIO',
+}) => {
+  const [role, setRole] = useState<RegisterRole>(initialRole);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,10 +32,30 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (isOpen) {
+      setRole(initialRole);
+      setName('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setInstitutionName('');
+      setError('');
+      setSuccess('');
+      setLoading(false);
+    }
+  }, [isOpen, initialRole]);
+
+  const handleRoleChange = (newRole: RegisterRole) => {
+    setRole(newRole);
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setInstitutionName('');
     setError('');
     setSuccess('');
     setLoading(false);
-  }, [role]);
+  };
 
   if (!isOpen) return null;
 
@@ -36,6 +63,19 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) {
+      setError('Por favor ingresa tu nombre.');
+      return;
+    }
+
+    if (role === 'INSTITUCION' && !institutionName.trim()) {
+      setError('Por favor ingresa el nombre de la institución educativa.');
+      return;
+    }
 
     if (password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres.');
@@ -48,8 +88,15 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
 
     setLoading(true);
     try {
-      const bodyPayload: any = { role, name, email, password };
-      if (institutionName) bodyPayload.institutionName = institutionName;
+      const bodyPayload: any = {
+        role,
+        name: trimmedName,
+        email: trimmedEmail,
+        password,
+      };
+      if (role === 'INSTITUCION' && institutionName.trim()) {
+        bodyPayload.institutionName = institutionName.trim();
+      }
 
       const { data, response: res } = await api.post<any>('/auth/register', bodyPayload, {
         skipAuthRedirect: true,
@@ -58,7 +105,10 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
       if (res.ok) {
         setSuccess(data?.message || 'Cuenta creada correctamente. Ahora puedes iniciar sesión.');
       } else {
-        setError(data?.error || 'No se pudo registrar la cuenta.');
+        const issuesText = Array.isArray(data?.issues) && data.issues.length > 0
+          ? data.issues.map((i: any) => i.message).join(' • ')
+          : null;
+        setError(data?.error ? (issuesText ? `${data.error} (${issuesText})` : data.error) : (issuesText || 'No se pudo registrar la cuenta.'));
       }
     } catch (err) {
       console.error(err);
@@ -107,7 +157,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
             <button
               key={rb.key}
               type="button"
-              onClick={() => setRole(rb.key)}
+              onClick={() => handleRoleChange(rb.key)}
               className={`py-1.5 rounded-md text-[11px] font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
                 role === rb.key
                   ? 'bg-[#1a73e8] text-white shadow-sm'

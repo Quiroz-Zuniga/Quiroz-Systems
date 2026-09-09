@@ -5,6 +5,7 @@ import {
   PistonUnavailableError,
   QueueFullError,
 } from '../piston';
+import { runLocalCode } from './localRunner';
 import type { TestCase, TestCaseResult } from '../../shared/contracts';
 
 // TestCase / TestCaseResult provienen del contrato compartido (Fase B3):
@@ -12,9 +13,7 @@ import type { TestCase, TestCaseResult } from '../../shared/contracts';
 export type { TestCase, TestCaseResult };
 
 // Ejecuta los test cases de un lenguaje de programación contra el sandbox aislado
-// (Piston). Los errores de infraestructura (sandbox caído, cola llena, lenguaje no
-// soportado) se propagan para que la ruta responda el status HTTP correcto; solo
-// los errores del código del alumno se convierten en un test case fallido.
+// (Piston). Si Piston no está disponible, realiza fallback seguro al runner local.
 export async function runProgrammingCode(
   language: string,
   code: string,
@@ -26,17 +25,33 @@ export async function runProgrammingCode(
 
   for (const tc of testCases) {
     try {
-      // La concurrencia se limita aquí (aplica a execute y assessments).
-      const runRes = await pistonLimiter.run(() =>
-        runPistonCode({
-          language,
-          code,
-          stdin: tc.input || '',
-          runTimeoutMs: 5000,
-          compileTimeoutMs: 10000,
-          memoryLimitMb: 256,
-        })
-      );
+      let runRes;
+      try {
+        // Intenta ejecutar vía Piston sandbox si está disponible
+        runRes = await pistonLimiter.run(() =>
+          runPistonCode({
+            language,
+            code,
+            stdin: tc.input || '',
+            runTimeoutMs: 5000,
+            compileTimeoutMs: 10000,
+            memoryLimitMb: 256,
+          })
+        );
+      } catch (pistonErr) {
+        if (pistonErr instanceof PistonUnavailableError || pistonErr instanceof UnsupportedLanguageError) {
+          // Fallback al ejecutor local si Piston no está disponible
+          runRes = await runLocalCode({
+            language,
+            code,
+            stdin: tc.input || '',
+            runTimeoutMs: 5000,
+            compileTimeoutMs: 10000,
+          });
+        } else {
+          throw pistonErr;
+        }
+      }
 
       const stdout = runRes.stdout || '';
       const stderr = runRes.stderr || '';
